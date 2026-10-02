@@ -1,0 +1,11 @@
+#ifndef SIMULADOR_ESCALONAMENTO_RMSCHEDULER_H
+#define SIMULADOR_ESCALONAMENTO_RMSCHEDULER_H
+#include "IScheduler.h"
+
+
+class RMScheduler: public IScheduler
+{
+};
+
+
+#endif //SIMULADOR_ESCALONAMENTO_RMSCHEDULER_H

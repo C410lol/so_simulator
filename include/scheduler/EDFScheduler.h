@@ -1,0 +1,11 @@
+#ifndef SIMULADOR_ESCALONAMENTO_EDFSCHEDULER_H
+#define SIMULADOR_ESCALONAMENTO_EDFSCHEDULER_H
+#include "IScheduler.h"
+
+
+class EDFScheduler: public IScheduler
+{
+};
+
+
+#endif //SIMULADOR_ESCALONAMENTO_EDFSCHEDULER_H
