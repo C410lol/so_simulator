@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.0)
-project(scheduler_simulator)
+project(so_simulator)
 
 set(CMAKE_CXX_STANDARD 20)
 

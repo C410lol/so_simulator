@@ -15,6 +15,7 @@ private:
     int deadline;
 
     int activationCount;
+    bool finished;
 public:
     Task(int id, std::string color, int start, int duration, int period, int deadline);
 };
