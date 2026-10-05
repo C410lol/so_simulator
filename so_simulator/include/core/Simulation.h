@@ -22,7 +22,6 @@ private:
     std::unique_ptr<IScheduler> scheduler;
 
     int quantum;
-    int currentQuantum;
 
     History history;
 
