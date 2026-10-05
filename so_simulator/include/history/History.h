@@ -12,7 +12,6 @@ class History
 private:
     std::vector<SystemState> states;
     int currentIndex;
-
 public:
     void save(const SystemState& state);
 
