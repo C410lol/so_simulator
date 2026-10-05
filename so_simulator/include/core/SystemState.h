@@ -10,11 +10,8 @@ class SystemState
 {
 private:
     int clock;
-
     std::vector<CPU> cpus;
     std::vector<TaskInstance> tasks;
-
-    std::vector<int> readyTasksIds;
 };
 
 
