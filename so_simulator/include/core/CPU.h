@@ -8,10 +8,27 @@ class CPU
 private:
     int id;
     bool active;
-
-    TaskInstance* currentTask;
-
     int idleTicks;
+    int quantum;
+    TaskInstance* currentTask;
+    int taskCurrentQuantum;
+public:
+    CPU(int quantum);
+
+    //  GETS
+    int getId() const;
+    bool isActive() const;
+    int getIdleTicks() const;
+    TaskInstance* getTaskInstance() const;
+    int getTaskCurrentQuantum() const;
+
+    //  SETS
+    void setActive(bool active);
+    void incrementIdleTicks();
+    void setTaskInstance(TaskInstance& taskInstance);
+    void removeTaskInstance();
+    void incrementTaskCurrentQuantum();
+    void resetTaskCurrentQuantum();
 };
 
 
