@@ -8,14 +8,15 @@ class TaskInstance
 {
 private:
     int id;
-    const Task* task;
+    Task* task;
     int activationTime;
     int absoluteDeadline;
     int executedTime;
+    int currentQuantum;
     TaskState state;
     bool deadlineMissed;
 public:
-    TaskInstance(Task& task, int activationTime);
+    TaskInstance(Task* task, int activationTime);
 
     //  GETS
     int getId() const;
@@ -23,13 +24,16 @@ public:
     int getActivationTime() const;
     int getAbsoluteDeadline() const;
     int getExecutedTime() const;
+    int getCurrentQuantum() const;
     TaskState getTaskState() const;
     bool isDeadlineMissed() const;
 
     //  SETS
     void incrementExecutedTime();
-    void setTaskState(TaskState taskState);
-    void setDeadlineMissed(bool deadlineMissed);
+    void incrementCurrentQuantum();
+    void resetCurrentQuantum();
+    void setTaskState(TaskState _state);
+    void setDeadlineMissed(bool _deadlineMissed);
 };
 
 

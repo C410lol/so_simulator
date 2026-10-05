@@ -30,9 +30,9 @@ public:
     bool isFinished() const;
 
     //  SETS
-    void setStarted(bool started);
+    void setStarted(bool _started);
     void incrementActivationCount();
-    void setFinished(bool finished);
+    void setFinished(bool _finished);
 };
 
 

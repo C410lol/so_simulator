@@ -9,26 +9,21 @@ private:
     int id;
     bool active;
     int idleTicks;
-    int quantum;
     TaskInstance* currentTask;
-    int taskCurrentQuantum;
 public:
-    CPU(int quantum);
+    CPU();
 
     //  GETS
     int getId() const;
     bool isActive() const;
     int getIdleTicks() const;
     TaskInstance* getTaskInstance() const;
-    int getTaskCurrentQuantum() const;
 
     //  SETS
-    void setActive(bool active);
+    void setActive(bool _active);
     void incrementIdleTicks();
-    void setTaskInstance(TaskInstance& taskInstance);
+    void setTaskInstance(TaskInstance* _taskInstance);
     void removeTaskInstance();
-    void incrementTaskCurrentQuantum();
-    void resetTaskCurrentQuantum();
 };
 
 
