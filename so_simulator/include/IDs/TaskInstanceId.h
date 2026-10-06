@@ -4,7 +4,6 @@
 class TaskInstanceId {
 private:
     inline static int currentId = 0;
-    TaskInstanceId() = delete;
 public:
     static int next() {
         return currentId++;
