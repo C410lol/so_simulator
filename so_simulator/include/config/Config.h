@@ -5,13 +5,22 @@
 #include "core/Task.h"
 
 
-class Config
+struct TaskStruct
 {
-    std::string schedulingAlgorithm;
+    int id;
+    std::string color;
+    int start;
+    int duration;
+    int period;
+    int deadline;
+};
+
+struct Config
+{
+    std::string scheduler;
     int quantum;
     int cpuCount;
-
-    std::vector<Task> tasks;
+    std::vector<TaskStruct> tasks;
 };
 
 
