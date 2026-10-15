@@ -12,31 +12,46 @@ class Simulation
 {
 private:
     int clock;
-
-    std::vector<Task> tasks;
-    std::vector<TaskInstance> instances;
-    std::vector<CPU> cpus;
-
-    ReadyQueue readyQueue;
-
-    std::unique_ptr<IScheduler> scheduler;
-
     int quantum;
 
-    History history;
+    bool shouldCallScheduler;
+    bool schedulingWasRandom;
 
-    bool running;
-public:
-    Simulation(Config config);
+    std::vector<Task*> tasks;
+    std::vector<TaskInstance*> instances;
+    std::vector<CPU*> cpus;
+
+    std::vector<TaskInstance*> readyQueue;
+    IScheduler* scheduler;
+
+    History history;
+private:
+    void initialize();
+    void loadGlobalConfigs(const Config& config);
+    void loadTasks(const Config& config);
+
+    bool isFinished();
+    bool isTasksFinished();
+    bool isInstancesFinished();
+
+    void checkInstancesDeadlines();
+    void checkInstancesExecution();
+    void checkTasksArrivals();
+
+    void callScheduler();
+    void setCallScheduler();
+    void unsetCallScheduler();
+
+    void executeInstances();
+
+    void saveToHistory();
 
     void tick();
-    void run();
-    void pause();
+public:
+    Simulation();
+    ~Simulation();
 
-    void nextStep();
-    void previousStep();
-
-    const SystemState& getSystemState() const;
+    void start();
 };
 
 
