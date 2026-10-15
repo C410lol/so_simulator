@@ -17,6 +17,7 @@ private:
     bool deadlineMissed;
 public:
     TaskInstance(Task* task, int activationTime);
+    TaskInstance(TaskInstance*);
 
     //  GETS
     int getId() const;

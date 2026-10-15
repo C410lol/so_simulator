@@ -12,6 +12,7 @@ private:
     TaskInstance* currentTask;
 public:
     CPU();
+    CPU(CPU*);
 
     //  GETS
     int getId() const;
