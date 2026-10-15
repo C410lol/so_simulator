@@ -8,13 +8,17 @@ class TaskInstance;
 
 class IScheduler
 {
+protected:
+    virtual TaskInstance* selectBestCandidate(TaskInstance* instanceA, TaskInstance* instanceB, bool& wasRandom) = 0;
+    TaskInstance* untie(TaskInstance* instanceA, TaskInstance* instanceB, bool& wasRandom);
 public:
     virtual ~IScheduler() = default;
 
-    virtual std::vector<TaskInstance*> schedule(
-        const std::vector<TaskInstance*>& tasks,
-        const std::vector<CPU*>& cpus
-    ) = 0;
+    virtual void schedule(
+        std::vector<TaskInstance*>& readyQueue,
+        std::vector<CPU*>& cpus,
+        bool& wasRandom
+    );
 };
 
 

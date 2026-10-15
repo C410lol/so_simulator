@@ -5,6 +5,10 @@
 
 class RMScheduler: public IScheduler
 {
+private:
+    TaskInstance* selectBestCandidate(TaskInstance* instanceA, TaskInstance* instanceB, bool& wasRandom) override;
+public:
+    RMScheduler();
 };
 
 
