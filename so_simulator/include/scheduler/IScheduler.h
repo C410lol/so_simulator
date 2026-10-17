@@ -2,6 +2,8 @@
 #define SIMULADOR_ESCALONAMENTO_ISCHEDULER_H
 #include <vector>
 
+#include "core/TaskInstance.h"
+
 
 class CPU;
 class TaskInstance;

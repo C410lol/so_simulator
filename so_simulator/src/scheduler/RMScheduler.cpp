@@ -1,6 +1,7 @@
 #include "../../include/scheduler/RMScheduler.h"
 
-#include "core/CPU.h"
+
+RMScheduler::RMScheduler() {}
 
 
 /*

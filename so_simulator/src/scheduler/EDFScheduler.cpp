@@ -1,6 +1,9 @@
 #include "../../include/scheduler/EDFScheduler.h"
 
 
+EDFScheduler::EDFScheduler() {}
+
+
 /*
  Returns the instance with shortest/closest absolte deadline or nullptr if they are equal
 */
