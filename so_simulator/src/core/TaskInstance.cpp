@@ -1,5 +1,6 @@
 #include "../../include/core/TaskInstance.h"
 #include "../../include/IDs/TaskInstanceId.h"
+#include "DTOs/TaskInstanceDTO.h"
 
 
 TaskInstance::TaskInstance(Task* task, int activationTime):
@@ -10,6 +11,13 @@ TaskInstance::TaskInstance(Task* task, int activationTime):
     if (task)
         absoluteDeadline = activationTime + task->getDeadline();
 }
+
+TaskInstance::TaskInstance(const TaskInstanceDTO& instanceDTO):
+id(instanceDTO.id), activationTime(instanceDTO.activationTime),
+task(nullptr), absoluteDeadline(instanceDTO.absoluteDeadline),
+executedTime(instanceDTO.executedTime), currentQuantum(instanceDTO.currentQuantum),
+state(instanceDTO.state), deadlineMissed(instanceDTO.deadlineMissed)
+{ }
 
 
 //  GETS
@@ -24,6 +32,7 @@ bool TaskInstance::isDeadlineMissed() const { return deadlineMissed; }
 
 
 //  SETS
+void TaskInstance::setTask(Task* _task) { task = _task; }
 void TaskInstance::incrementExecutedTime() { executedTime++; }
 void TaskInstance::incrementCurrentQuantum() { currentQuantum++; }
 void TaskInstance::resetCurrentQuantum() { currentQuantum = 0; }

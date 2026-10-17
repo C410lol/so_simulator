@@ -3,6 +3,8 @@
 #include "TaskInstance.h"
 
 
+class CpuDTO;
+
 class CPU
 {
 private:
@@ -12,7 +14,7 @@ private:
     TaskInstance* currentTask;
 public:
     CPU();
-    CPU(CPU*);
+    CPU(const CpuDTO& cpuDTO);
 
     //  GETS
     int getId() const;

@@ -4,6 +4,8 @@
 #include "TaskState.h"
 
 
+class TaskInstanceDTO;
+
 class TaskInstance
 {
 private:
@@ -17,7 +19,7 @@ private:
     bool deadlineMissed;
 public:
     TaskInstance(Task* task, int activationTime);
-    TaskInstance(TaskInstance*);
+    TaskInstance(const TaskInstanceDTO& instanceDTO);
 
     //  GETS
     int getId() const;
@@ -30,6 +32,7 @@ public:
     bool isDeadlineMissed() const;
 
     //  SETS
+    void setTask(Task* _task);
     void incrementExecutedTime();
     void incrementCurrentQuantum();
     void resetCurrentQuantum();

@@ -1,8 +1,14 @@
 #include "../../include/core/CPU.h"
 #include "../../include/IDs/CpuId.h"
+#include "DTOs/CpuDTO.h"
 
 
 CPU::CPU(): id(CpuId::next()), active(false), idleTicks(0), currentTask(nullptr) { }
+
+CPU::CPU(const CpuDTO& cpuDTO):
+id(cpuDTO.id), active(cpuDTO.active),
+idleTicks(cpuDTO.idleTicks), currentTask(nullptr)
+{ }
 
 
 //  GETS

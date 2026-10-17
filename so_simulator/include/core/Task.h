@@ -3,6 +3,8 @@
 #include <string>
 
 
+class TaskDTO;
+
 class Task
 {
 private:
@@ -16,7 +18,7 @@ private:
     bool finished;
 public:
     Task(int id, std::string color, int start, int duration, int period, int deadline);
-    Task(Task*);
+    Task(const TaskDTO& taskDTO);
 
     //  GETS
     int getId() const;

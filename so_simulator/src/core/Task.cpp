@@ -1,11 +1,18 @@
 #include "../../include/core/Task.h"
 
+#include "DTOs/TaskDTO.h"
 
 
 Task::Task(int id, std::string color, int start, int duration, int period, int deadline):
     id(id), color(color), start(start),
     duration(duration), period(period),
     deadline(deadline), activationCount(0), finished(false)
+{ }
+
+Task::Task(const TaskDTO& taskDTO):
+id(taskDTO.id), color(taskDTO.color), start(taskDTO.start),
+duration(taskDTO.duration), period(taskDTO.period), deadline(taskDTO.deadline),
+activationCount(taskDTO.activationCount), finished(taskDTO.finished)
 { }
 
 
