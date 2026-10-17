@@ -8,7 +8,7 @@
 #include "scheduler/RMScheduler.h"
 
 
-Simulation::Simulation():clock(0) { initialize(); }
+Simulation::Simulation(std::string filePath):clock(0) { initialize(filePath); }
 
 Simulation::~Simulation()
 {
@@ -28,13 +28,8 @@ Simulation::~Simulation()
 
 
 
-void Simulation::initialize()
+void Simulation::initialize(std::string filePath)
 {
-    std::string filePath;
-
-    std::cout << "Digite o caminho do arquivo de configuração: ";
-    std::cin >> filePath;
-
     Config config;
     try
     {
@@ -65,6 +60,9 @@ void Simulation::loadGlobalConfigs(const Config& config)
         cpus.push_back(new CPU());
 }
 
+/*
+    Load tasks from config file
+*/
 void Simulation::loadTasks(const Config& config)
 {
     //  Creates each task
@@ -76,17 +74,99 @@ void Simulation::loadTasks(const Config& config)
 
 
 /*
+    Load tasks from system state
+*/
+void Simulation::loadTasks(SystemState& systemState)
+{
+    tasks.clear();
+
+    std::vector<TaskDTO> newTasks = systemState.getTasks();
+    for (TaskDTO taskDTO: newTasks)
+        tasks.push_back(new Task(taskDTO));
+}
+
+/*
+    Load instances from system state
+*/
+void Simulation::loadInstances(SystemState& systemState)
+{
+    instances.clear();
+
+    std::vector<TaskInstanceDTO> newInstances = systemState.getInstances();
+    for (TaskInstanceDTO instanceDTO: newInstances)
+    {
+        TaskInstance* newInstance = new TaskInstance(instanceDTO);
+
+        //  Since we stored just the task id, we must find the object itself and point to it
+        newInstance->setTask(findTaskById(instanceDTO.taskId));
+
+        instances.push_back(newInstance);
+    }
+}
+
+/*
+    Load cpus from system state
+*/
+void Simulation::loadCpus(SystemState& systemState)
+{
+    cpus.clear();
+
+    std::vector<CpuDTO> newCpus = systemState.getCpus();
+    for (CpuDTO cpuDTO: newCpus)
+    {
+        CPU* newCPU = new CPU(cpuDTO);
+
+        //  Since we stored just the instance id, we must find the object itself and point to it
+        newCPU->setTaskInstance(findInstanceById(cpuDTO.currentTaskId));
+
+        cpus.push_back(newCPU);
+    }
+}
+
+
+
+
+Task* Simulation::findTaskById(int id)
+{
+    for (Task* task: tasks)
+        if (task->getId() == id)
+            return task;
+    return nullptr;
+}
+
+TaskInstance* Simulation::findInstanceById(int id)
+{
+    for (TaskInstance* instance: instances)
+        if (instance->getId() == id)
+            return instance;
+    return nullptr;
+}
+
+
+
+
+/*
     Main loop of the simulation
 */
 void Simulation::start()
 {
-    while (!isFinished())
+    std::string command;
+    bool end = false;
+    bool runAll = false;
+
+    while (!end)
     {
         checkInstancesExecution();
         checkInstancesDeadlines();
         checkTasksArrivals();
-
         saveToHistory();
+
+        if ()
+        std::cin >> command;
+        if ("previous")
+        {
+
+        }
 
         if (shouldCallScheduler)
             callScheduler();
@@ -95,6 +175,16 @@ void Simulation::start()
         tick();
         unsetCallScheduler();
     }
+}
+
+void Simulation::execute()
+{
+    if (shouldCallScheduler)
+        callScheduler();
+    executeInstances();
+
+    tick();
+    unsetCallScheduler();
 }
 
 
@@ -152,6 +242,10 @@ void Simulation::checkInstancesExecution()
         {
             instance->setTaskState(TaskState::FINISHED);
 
+            //  If the task of the instance reached the limit of times of activation, we set as finished
+            if (instance->getTask()->activatedLimitOfTimes())
+                instance->getTask()->setFinished(true);
+
             //  Remove instance from CPU
             cpu->removeTaskInstance();
             cpu->setActive(false);
@@ -192,8 +286,8 @@ void Simulation::checkTasksArrivals()
 {
     for (Task* task: tasks)
     {
-        //  We want to check just the tasks that didn't finished yet
-        if (task->isFinished())
+        //  We want to check just the tasks that didn't finished or reached the limit of activation
+        if (task->isFinished() || task->activatedLimitOfTimes())
             continue;
 
         //  Checks if the task arrived
@@ -235,7 +329,11 @@ void Simulation::executeInstances()
     {
         TaskInstance* instance = cpu->getTaskInstance();
         if (!cpu->isActive() || instance == nullptr)
+        {
+            //  If the CPU is not currently running a task, we increase its idle ticks
+            cpu->incrementIdleTicks();
             continue;
+        }
 
         instance->incrementExecutedTime();
         //instance->incrementCurrentQuantum();
@@ -250,6 +348,13 @@ void Simulation::executeInstances()
 */
 void Simulation::saveToHistory()
 {
+    const SystemState currentSystemState(clock, tasks, instances, cpus);
+    history.save(currentSystemState);
+}
+
+void Simulation::retrieveFromHistory()
+{
+    SystemState lastSystemState = history.previous();
 
 }
 

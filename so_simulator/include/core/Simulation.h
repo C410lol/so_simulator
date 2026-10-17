@@ -1,8 +1,9 @@
 #ifndef SIMULADOR_ESCALONAMENTO_SIMULATION_H
 #define SIMULADOR_ESCALONAMENTO_SIMULATION_H
-#include <memory>
 
-#include "SystemState.h"
+#include "Task.h"
+#include "TaskInstance.h"
+#include "CPU.h"
 #include "config/Config.h"
 #include "history/History.h"
 #include "scheduler/IScheduler.h"
@@ -26,9 +27,16 @@ private:
 
     History history;
 private:
-    void initialize();
+    void initialize(std::string filePath);
+
     void loadGlobalConfigs(const Config& config);
     void loadTasks(const Config& config);
+    void loadTasks(SystemState& systemState);
+    void loadInstances(SystemState& systemState);
+    void loadCpus(SystemState& systemState);
+
+    Task* findTaskById(int id);
+    TaskInstance* findInstanceById(int id);
 
     bool isFinished();
     bool isTasksFinished();
@@ -42,13 +50,15 @@ private:
     void setCallScheduler();
     void unsetCallScheduler();
 
+    void execute();
     void executeInstances();
 
     void saveToHistory();
+    void retrieveFromHistory();
 
     void tick();
 public:
-    Simulation();
+    Simulation(std::string filePath);
     ~Simulation();
 
     void start();
