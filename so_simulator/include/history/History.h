@@ -2,7 +2,7 @@
 #define SIMULADOR_ESCALONAMENTO_HISTORY_H
 #include <vector>
 
-#include "../core/SystemState.h"
+#include "SystemState.h"
 
 
 class SystemState;
@@ -13,12 +13,10 @@ private:
     std::vector<SystemState> states;
     int currentIndex;
 public:
+    History();
+
     void save(const SystemState& state);
-
-    void next();
-    void previous();
-
-    SystemState& current();
+    SystemState& previous();
 };
 
 
