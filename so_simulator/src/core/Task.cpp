@@ -26,6 +26,9 @@ int Task::getDeadline() const { return deadline; }
 int Task::getActivationCount() const { return activationCount; }
 bool Task::isFinished() const { return finished; }
 
+std::vector<TaskInstance *> Task::getInstances() { return instances; }
+
+
 //  Returns true if the task reached the limit of 10 activations
 bool Task::activatedLimitOfTimes() const { return activationCount == 10; }
 
@@ -33,3 +36,9 @@ bool Task::activatedLimitOfTimes() const { return activationCount == 10; }
 //  SETS
 void Task::incrementActivationCount() { activationCount++; }
 void Task::setFinished(bool _finished) { finished = _finished; }
+
+void Task::addInstance(TaskInstance *instance)
+{
+    instances.push_back(instance);
+    incrementActivationCount();
+}

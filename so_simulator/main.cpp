@@ -1,8 +1,9 @@
-#include "core/Simulation.h"
+#include "ui/Application.h"
 
-int main(int argc, char* argv[])
+
+int main()
 {
-    Simulation simulation(argv[1]);
-    simulation.start();
+    Application application;
+    application.start();
     return 0;
 }

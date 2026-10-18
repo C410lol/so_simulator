@@ -1,6 +1,7 @@
 #include "../../include/core/Simulation.h"
 
 #include <iostream>
+#include <utility>
 
 #include "config/ConfigParser.h"
 #include "config/ConfigValidator.h"
@@ -8,7 +9,15 @@
 #include "scheduler/RMScheduler.h"
 
 
-Simulation::Simulation(std::string filePath):clock(0) { initialize(filePath); }
+Simulation::Simulation(std::string filePath):
+clock(0), quantum(0), shouldCallScheduler(false),
+schedulingWasRandom(false)
+{
+    initialize(std::move(filePath));
+}
+Simulation::Simulation():
+clock(0), quantum(0), shouldCallScheduler(false),
+schedulingWasRandom(false) {}
 
 Simulation::~Simulation()
 {
@@ -76,29 +85,28 @@ void Simulation::loadTasks(const Config& config)
 /*
     Load tasks from system state
 */
-void Simulation::loadTasks(SystemState& systemState)
+void Simulation::loadTasks(const std::vector<TaskDTO>& _tasks)
 {
     tasks.clear();
 
-    std::vector<TaskDTO> newTasks = systemState.getTasks();
-    for (TaskDTO taskDTO: newTasks)
+    for (const TaskDTO& taskDTO: _tasks)
         tasks.push_back(new Task(taskDTO));
 }
 
 /*
     Load instances from system state
 */
-void Simulation::loadInstances(SystemState& systemState)
+void Simulation::loadInstances(const std::vector<TaskInstanceDTO>& _instances)
 {
     instances.clear();
 
-    std::vector<TaskInstanceDTO> newInstances = systemState.getInstances();
-    for (TaskInstanceDTO instanceDTO: newInstances)
+    for (TaskInstanceDTO instanceDTO: _instances)
     {
         TaskInstance* newInstance = new TaskInstance(instanceDTO);
 
         //  Since we stored just the task id, we must find the object itself and point to it
         newInstance->setTask(findTaskById(instanceDTO.taskId));
+        newInstance->getTask()->addInstance(newInstance);
 
         instances.push_back(newInstance);
     }
@@ -107,12 +115,11 @@ void Simulation::loadInstances(SystemState& systemState)
 /*
     Load cpus from system state
 */
-void Simulation::loadCpus(SystemState& systemState)
+void Simulation::loadCpus(const std::vector<CpuDTO>& _cpus)
 {
     cpus.clear();
 
-    std::vector<CpuDTO> newCpus = systemState.getCpus();
-    for (CpuDTO cpuDTO: newCpus)
+    for (CpuDTO cpuDTO: _cpus)
     {
         CPU* newCPU = new CPU(cpuDTO);
 
@@ -121,6 +128,18 @@ void Simulation::loadCpus(SystemState& systemState)
 
         cpus.push_back(newCPU);
     }
+}
+
+/*
+    Load ready queue by getting instances that are marked as READY in the global instances list
+*/
+void Simulation::loadReadyQueue()
+{
+    readyQueue.clear();
+
+    for (TaskInstance* instance: instances)
+        if (instance->getTaskState() == TaskState::READY)
+            readyQueue.push_back(instance);
 }
 
 
@@ -145,44 +164,40 @@ TaskInstance* Simulation::findInstanceById(int id)
 
 
 
+
+
+void Simulation::prerun()
+{
+    checkInstancesExecution();
+    checkInstancesDeadlines();
+    checkTasksArrivals();
+
+    if (shouldCallScheduler)
+        callScheduler();
+
+    saveToHistory();
+}
+
+void Simulation::back()
+{
+    retrieveFromHistory();
+}
+
 /*
     Main loop of the simulation
 */
-void Simulation::start()
+void Simulation::runAll()
 {
-    std::string command;
-    bool end = false;
-    bool runAll = false;
-
-    while (!end)
+    while (!isFinished())
     {
-        checkInstancesExecution();
-        checkInstancesDeadlines();
-        checkTasksArrivals();
-        saveToHistory();
-
-        if ()
-        std::cin >> command;
-        if ("previous")
-        {
-
-        }
-
-        if (shouldCallScheduler)
-            callScheduler();
-        executeInstances();
-
-        tick();
-        unsetCallScheduler();
+        prerun();
+        run();
     }
 }
 
-void Simulation::execute()
+void Simulation::run()
 {
-    if (shouldCallScheduler)
-        callScheduler();
     executeInstances();
-
     tick();
     unsetCallScheduler();
 }
@@ -276,9 +291,9 @@ void Simulation::checkInstancesExecution()
 
 void Simulation::checkInstancesDeadlines()
 {
-    for (TaskInstance* instance: readyQueue)
+    for (TaskInstance* instance: instances)
         //  Checking if the instance missed its deadline
-        if (clock > instance->getAbsoluteDeadline())
+        if (instance->getTaskState() != TaskState::FINISHED && clock > instance->getAbsoluteDeadline())
             instance->setDeadlineMissed(true);
 }
 
@@ -293,10 +308,10 @@ void Simulation::checkTasksArrivals()
         //  Checks if the task arrived
         if (clock >= task->getStart() && (clock - task->getStart()) % task->getPeriod() == 0)
         {
-            task->incrementActivationCount();
-
             //  Creates a new instance of the task and putting it in the ready queue
             TaskInstance* instance = new TaskInstance(task, clock);
+
+            task->addInstance(instance);
             instances.push_back(instance);
             readyQueue.push_back(instance);
 
@@ -348,21 +363,42 @@ void Simulation::executeInstances()
 */
 void Simulation::saveToHistory()
 {
-    const SystemState currentSystemState(clock, tasks, instances, cpus);
+    const SystemState currentSystemState(clock, schedulingWasRandom, tasks, instances, cpus);
     history.save(currentSystemState);
 }
 
+/*
+    Go back to the last saved system state
+*/
 void Simulation::retrieveFromHistory()
 {
     SystemState lastSystemState = history.previous();
 
+    clock = lastSystemState.getClock();
+    schedulingWasRandom = lastSystemState.getSchedulingWasRandom();
+
+    loadTasks(lastSystemState.getTasks());
+    loadInstances(lastSystemState.getInstances());
+    loadCpus(lastSystemState.getCpus());
+
+    loadReadyQueue();
 }
+
+
 
 
 /*
  Advances the system clock
 */
-void Simulation::tick()
-{
-    clock++;
-}
+void Simulation::tick() { clock++; }
+
+
+
+//  GETERS
+int Simulation::getCurrentClock() const { return clock; }
+std::vector<Task*> Simulation::getTasks() const { return tasks; }
+std::vector<TaskInstance*> Simulation::getInstances() const { return instances; }
+std::vector<CPU*> Simulation::getCpus() const { return cpus; }
+std::vector<TaskInstance*> Simulation::getReadyQueue() const { return readyQueue; }
+History Simulation::getHistory() const { return history; }
+
