@@ -131,9 +131,7 @@ void Application::render()
 
 void Application::printGraphic()
 {
-    std::cout << "==================== GRÁFICO GANTT ====================
-
-";
+    std::cout << "==================== GRÁFICO GANTT ====================";
 
     const std::vector<Task*> tasks = simulation.getTasks();
     for (int i = tasks.size() - 1; i >= 0; i--)
@@ -148,9 +146,7 @@ void Application::printGraphic()
         }
     }
 
-    std::cout << "=======================================================
-
-";
+    std::cout << "=======================================================";
 }
 
 void Application::printReadyQueue()
