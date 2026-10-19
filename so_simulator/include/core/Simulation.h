@@ -26,6 +26,8 @@ private:
     IScheduler* scheduler{};
 
     History history;
+    std::string schedulerName;
+    std::string lastError;
 private:
     void loadGlobalConfigs(const Config& config);
     void loadTasks(const Config& config);
@@ -61,7 +63,13 @@ public:
     Simulation();
     ~Simulation();
 
-    void initialize(std::string filePath);
+    bool initialize(std::string filePath);
+    void setScheduler(const std::string& algorithm);
+    std::string getSchedulerName() const;
+    bool isSimulationFinished();
+    bool canGoBack() const;
+    std::string getLastError() const;
+    bool setInstanceState(int instanceId, TaskState state, std::string& error);
 
     void prerun();
     void back();

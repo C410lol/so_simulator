@@ -1,5 +1,6 @@
 #include "../../include/core/Simulation.h"
 
+#include <algorithm>
 #include <iostream>
 #include <utility>
 
@@ -32,25 +33,30 @@ Simulation::~Simulation()
     //  Deletes all CPUs
     for (const CPU* cpus: cpus)
         delete cpus;
+
+    delete scheduler;
 }
 
 
 
 
-void Simulation::initialize(std::string filePath)
+bool Simulation::initialize(std::string filePath)
 {
     Config config;
     try
     {
         config = ConfigParser::parse(filePath);
         ConfigValidator::validate(config);
-    } catch (std::exception e)
+    } catch (const std::exception& e)
     {
-        std::cerr << "Erro ao abrir/validar arquivo de configuração: " << e.what() << '\n';
+        lastError = e.what();
+        return false;
     }
 
+    lastError.clear();
     loadGlobalConfigs(config);
     loadTasks(config);
+    return true;
 }
 
 void Simulation::loadGlobalConfigs(const Config& config)
@@ -60,6 +66,7 @@ void Simulation::loadGlobalConfigs(const Config& config)
         scheduler = new RMScheduler();
     else
         scheduler = new EDFScheduler();
+    schedulerName = config.scheduler;
 
     //  Sets the quantum
     quantum = config.quantum;
@@ -190,7 +197,11 @@ void Simulation::runAll()
 {
     while (!isFinished())
     {
-        prerun();
+        const auto& savedStates = history.getStates();
+        if (savedStates.empty() || savedStates.back().getClock() != clock)
+            prerun();
+        if (isFinished())
+            break;
         run();
     }
 }
@@ -244,7 +255,7 @@ void Simulation::checkInstancesExecution()
     {
         //  We want just the CPUs that are executing a instance
         TaskInstance* instance = cpu->getTaskInstance();
-        if (cpu->isActive() || instance != nullptr)
+        if (!cpu->isActive() || instance == nullptr)
             continue;
 
         //  Checking if the task is null
@@ -268,24 +279,6 @@ void Simulation::checkInstancesExecution()
             //  Must call the scheduler after this
             setCallScheduler();
         }
-
-        /*
-        //  Checks if it runned out of quantum
-        if (instance->getCurrentQuantum() >= quantum)
-        {
-            instance->setTaskState(TaskState::READY);
-
-            //  Return instance to the ready queue
-            readyQueue.push_back(instance);
-
-            //  Remove instance from CPU
-            cpu->removeTaskInstance();
-            cpu->setActive(false);
-
-            //  Must call the scheduler after this
-            setCallScheduler();
-        }
-        */
     }
 }
 
@@ -401,4 +394,119 @@ std::vector<TaskInstance*> Simulation::getInstances() const { return instances; 
 std::vector<CPU*> Simulation::getCpus() const { return cpus; }
 std::vector<TaskInstance*> Simulation::getReadyQueue() const { return readyQueue; }
 History Simulation::getHistory() const { return history; }
+
+void Simulation::setScheduler(const std::string& algorithm)
+{
+    bool changed = false;
+    if (algorithm == "RM" && schedulerName != "RM")
+    {
+        delete scheduler;
+        scheduler = new RMScheduler();
+        schedulerName = "RM";
+        changed = true;
+    }
+    else if (algorithm == "EDF" && schedulerName != "EDF")
+    {
+        delete scheduler;
+        scheduler = new EDFScheduler();
+        schedulerName = "EDF";
+        changed = true;
+    }
+    if (changed)
+    {
+        callScheduler();
+        saveToHistory();
+    }
+}
+
+std::string Simulation::getSchedulerName() const { return schedulerName; }
+bool Simulation::isSimulationFinished() { return isFinished(); }
+bool Simulation::canGoBack() const { return history.canGoBack(); }
+std::string Simulation::getLastError() const { return lastError; }
+
+bool Simulation::setInstanceState(const int instanceId, const TaskState state, std::string& error)
+{
+    TaskInstance* instance = findInstanceById(instanceId);
+    if (instance == nullptr)
+    {
+        error = "A instância selecionada não existe mais no estado atual.";
+        return false;
+    }
+    if (instance->getTaskState() == state)
+        return true;
+    if (state != TaskState::READY && state != TaskState::RUNNING && state != TaskState::FINISHED)
+    {
+        error = "O estado solicitado não é suportado pelo simulador.";
+        return false;
+    }
+    if (instance->getTaskState() == TaskState::FINISHED)
+    {
+        error = "Uma instância finalizada não pode ser reaberta.";
+        return false;
+    }
+
+    CPU* assignedCpu = nullptr;
+    for (CPU* cpu : cpus)
+    {
+        if (cpu->getTaskInstance() == instance)
+        {
+            assignedCpu = cpu;
+            break;
+        }
+    }
+
+    readyQueue.erase(std::remove(readyQueue.begin(), readyQueue.end(), instance), readyQueue.end());
+
+    if (state == TaskState::READY)
+    {
+        if (assignedCpu != nullptr)
+        {
+            assignedCpu->removeTaskInstance();
+            assignedCpu->setActive(false);
+        }
+        instance->setTaskState(TaskState::READY);
+        readyQueue.push_back(instance);
+        setCallScheduler();
+    }
+    else if (state == TaskState::FINISHED)
+    {
+        if (assignedCpu != nullptr)
+        {
+            assignedCpu->removeTaskInstance();
+            assignedCpu->setActive(false);
+        }
+        instance->setTaskState(TaskState::FINISHED);
+        if (instance->getTask()->activatedLimitOfTimes())
+            instance->getTask()->setFinished(true);
+        setCallScheduler();
+        callScheduler();
+        unsetCallScheduler();
+    }
+    else
+    {
+        CPU* targetCpu = assignedCpu;
+        if (targetCpu == nullptr)
+        {
+            const auto idleCpu = std::find_if(cpus.begin(), cpus.end(), [](const CPU* cpu) {
+                return !cpu->isActive() || cpu->getTaskInstance() == nullptr;
+            });
+            targetCpu = idleCpu != cpus.end() ? *idleCpu : cpus.back();
+        }
+
+        if (targetCpu->isActive() && targetCpu->getTaskInstance() != nullptr && targetCpu->getTaskInstance() != instance)
+        {
+            TaskInstance* displaced = targetCpu->getTaskInstance();
+            displaced->setTaskState(TaskState::READY);
+            readyQueue.push_back(displaced);
+        }
+        targetCpu->setTaskInstance(instance);
+        targetCpu->setActive(true);
+        instance->setTaskState(TaskState::RUNNING);
+        unsetCallScheduler();
+    }
+
+    saveToHistory();
+    error.clear();
+    return true;
+}
 
