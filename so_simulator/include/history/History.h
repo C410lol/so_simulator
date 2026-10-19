@@ -1,6 +1,7 @@
 #ifndef SIMULADOR_ESCALONAMENTO_HISTORY_H
 #define SIMULADOR_ESCALONAMENTO_HISTORY_H
 #include <vector>
+#include <stdexcept>
 
 #include "SystemState.h"
 
@@ -17,6 +18,9 @@ public:
 
     void save(const SystemState& state);
     SystemState& previous();
+    const std::vector<SystemState>& getStates() const;
+    int getCurrentIndex() const;
+    bool canGoBack() const;
 };
 
 
