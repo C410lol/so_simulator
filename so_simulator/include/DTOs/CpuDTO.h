@@ -6,10 +6,10 @@
 class CpuDTO
 {
 public:
-    int id;
-    bool active;
-    int idleTicks;
-    int currentTaskId;
+    int id{};
+    bool active{};
+    int idleTicks{};
+    int currentTaskId{};
 
     explicit CpuDTO(const CPU* cpu)
     {
