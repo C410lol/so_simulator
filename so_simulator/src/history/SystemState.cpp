@@ -3,10 +3,11 @@
 
 SystemState::SystemState(
     const int _clock,
+    bool _schedulingWasRandom,
     const std::vector<Task*>& _tasks,
     const std::vector<TaskInstance*>& _instances,
     const std::vector<CPU*>& _cpus
-):clock(_clock)
+):clock(_clock), schedulingWasRandom(_schedulingWasRandom)
 {
     copyTasks(_tasks);
     copyInstances(_instances);
@@ -38,6 +39,7 @@ void SystemState::copyCpus(const std::vector<CPU*>& _cpus)
 
 
 int SystemState::getClock() const { return clock; }
+bool SystemState::getSchedulingWasRandom() const { return schedulingWasRandom; }
 std::vector<TaskDTO> SystemState::getTasks() { return tasks; }
 std::vector<TaskInstanceDTO> SystemState::getInstances() { return instances; }
 std::vector<CpuDTO> SystemState::getCpus() { return cpus; }

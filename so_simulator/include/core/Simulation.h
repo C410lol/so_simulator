@@ -23,17 +23,17 @@ private:
     std::vector<CPU*> cpus;
 
     std::vector<TaskInstance*> readyQueue;
-    IScheduler* scheduler;
+    IScheduler* scheduler{};
 
     History history;
 private:
-    void initialize(std::string filePath);
-
     void loadGlobalConfigs(const Config& config);
     void loadTasks(const Config& config);
-    void loadTasks(SystemState& systemState);
-    void loadInstances(SystemState& systemState);
-    void loadCpus(SystemState& systemState);
+
+    void loadTasks(const std::vector<TaskDTO>& _tasks);
+    void loadInstances(const std::vector<TaskInstanceDTO>& _instances);
+    void loadCpus(const std::vector<CpuDTO>& _cpus);
+    void loadReadyQueue();
 
     Task* findTaskById(int id);
     TaskInstance* findInstanceById(int id);
@@ -50,7 +50,6 @@ private:
     void setCallScheduler();
     void unsetCallScheduler();
 
-    void execute();
     void executeInstances();
 
     void saveToHistory();
@@ -59,9 +58,24 @@ private:
     void tick();
 public:
     Simulation(std::string filePath);
+    Simulation();
     ~Simulation();
 
-    void start();
+    void initialize(std::string filePath);
+
+    void prerun();
+    void back();
+    void runAll();
+    void run();
+
+    int getCurrentClock() const;
+
+    std::vector<Task*> getTasks() const;
+    std::vector<TaskInstance*> getInstances() const;
+    std::vector<CPU*> getCpus() const;
+    std::vector<TaskInstance*> getReadyQueue() const;
+
+    History getHistory() const;
 };
 
 

@@ -9,6 +9,7 @@ class TaskInstanceDTO
 public:
     int id;
     int taskId;
+    int instanceNumber;
     int activationTime;
     int absoluteDeadline;
     int executedTime;
@@ -23,6 +24,7 @@ public:
 
         id = instance->getId();
         taskId = instance->getTask()->getId();
+        instanceNumber = instance->getInstanceNumber();
         activationTime = instance->getActivationTime();
         absoluteDeadline = instance->getAbsoluteDeadline();
         executedTime = instance->getExecutedTime();

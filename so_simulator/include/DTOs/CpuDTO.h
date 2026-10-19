@@ -19,7 +19,9 @@ public:
         id = cpu->getId();
         active = cpu->isActive();
         idleTicks = cpu->getIdleTicks();
-        currentTaskId = cpu->getTaskInstance()->getId();
+
+        if (cpu->isActive() && cpu->getTaskInstance() != nullptr)
+            currentTaskId = cpu->getTaskInstance()->getId();
     }
 };
 

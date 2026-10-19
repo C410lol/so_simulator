@@ -9,12 +9,15 @@ TaskInstance::TaskInstance(Task* task, int activationTime):
     deadlineMissed(false)
 {
     if (task)
+    {
+        instanceNumber = task->getActivationCount();
         absoluteDeadline = activationTime + task->getDeadline();
+    }
 }
 
 TaskInstance::TaskInstance(const TaskInstanceDTO& instanceDTO):
 id(instanceDTO.id), activationTime(instanceDTO.activationTime),
-task(nullptr), absoluteDeadline(instanceDTO.absoluteDeadline),
+task(nullptr), instanceNumber(instanceDTO.instanceNumber), absoluteDeadline(instanceDTO.absoluteDeadline),
 executedTime(instanceDTO.executedTime), currentQuantum(instanceDTO.currentQuantum),
 state(instanceDTO.state), deadlineMissed(instanceDTO.deadlineMissed)
 { }

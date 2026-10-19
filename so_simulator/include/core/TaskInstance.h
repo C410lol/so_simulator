@@ -11,6 +11,7 @@ class TaskInstance
 private:
     int id;
     Task* task;
+    int instanceNumber;
     int activationTime;
     int absoluteDeadline;
     int executedTime;
@@ -24,6 +25,7 @@ public:
     //  GETS
     int getId() const;
     Task* getTask() const;
+    int getInstanceNumber() const;
     int getActivationTime() const;
     int getAbsoluteDeadline() const;
     int getExecutedTime() const;
