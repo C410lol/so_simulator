@@ -40,6 +40,6 @@ void SystemState::copyCpus(const std::vector<CPU*>& _cpus)
 
 int SystemState::getClock() const { return clock; }
 bool SystemState::getSchedulingWasRandom() const { return schedulingWasRandom; }
-std::vector<TaskDTO> SystemState::getTasks() { return tasks; }
-std::vector<TaskInstanceDTO> SystemState::getInstances() { return instances; }
-std::vector<CpuDTO> SystemState::getCpus() { return cpus; }
+std::vector<TaskDTO> SystemState::getTasks() const { return tasks; }
+std::vector<TaskInstanceDTO> SystemState::getInstances() const { return instances; }
+std::vector<CpuDTO> SystemState::getCpus() const { return cpus; }
