@@ -3,6 +3,10 @@ project(so_simulator LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Compilar estaticamente as bibliotecas que respeitam essa opção.
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
@@ -25,7 +29,7 @@ FetchContent_Declare(dearimgui
 )
 FetchContent_GetProperties(dearimgui)
 if(NOT dearimgui_POPULATED)
-    FetchContent_Populate(dearimgui)
+    FetchContent_MakeAvailable(dearimgui)
 endif()
 
 FetchContent_Declare(rlimgui
@@ -36,7 +40,7 @@ FetchContent_Declare(rlimgui
 )
 FetchContent_GetProperties(rlimgui)
 if(NOT rlimgui_POPULATED)
-    FetchContent_Populate(rlimgui)
+    FetchContent_MakeAvailable(rlimgui)
 endif()
 
 FetchContent_Declare(tinyfiledialogs
@@ -46,7 +50,7 @@ FetchContent_Declare(tinyfiledialogs
 )
 FetchContent_GetProperties(tinyfiledialogs)
 if(NOT tinyfiledialogs_POPULATED)
-    FetchContent_Populate(tinyfiledialogs)
+    FetchContent_MakeAvailable(tinyfiledialogs)
 endif()
 
 add_library(imgui STATIC
