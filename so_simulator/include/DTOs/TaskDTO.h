@@ -23,7 +23,7 @@ public:
             return;
 
         id = task->getId();
-        color.copy(task->getColor().data(), task->getColor().size(), 0);
+        color = task->getColor();
         start = task->getStart();
         duration = task->getDuration();
         period = task->getPeriod();
