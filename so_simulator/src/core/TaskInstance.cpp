@@ -26,6 +26,7 @@ state(instanceDTO.state), deadlineMissed(instanceDTO.deadlineMissed)
 //  GETS
 int TaskInstance::getId() const { return id; }
 Task* TaskInstance::getTask() const { return task; }
+int TaskInstance::getInstanceNumber() const { return instanceNumber; }
 int TaskInstance::getActivationTime() const { return activationTime; }
 int TaskInstance::getAbsoluteDeadline() const { return absoluteDeadline; }
 int TaskInstance::getExecutedTime() const { return executedTime; }
