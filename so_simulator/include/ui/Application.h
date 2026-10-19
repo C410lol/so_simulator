@@ -1,30 +1,35 @@
 #ifndef SIMULADOR_ESCALONAMENTO_APPLICATION_H
 #define SIMULADOR_ESCALONAMENTO_APPLICATION_H
+
 #include "../core/Simulation.h"
 
+#include <string>
 
 class Application
 {
 private:
     Simulation simulation;
-private:
-    static void clearScreen();
-    static void clearLastLine();
+    bool initialized = false;
+    bool showConfigError = false;
+    bool ganttExported = false;
+    std::string configPath;
+    std::string configError;
+    std::string stateEditMessage;
+    bool stateEditFailed = false;
 
-    static void printIntroduction(std::string& answer, std::string& filePath);
-    void printTitle();
-    static void printCommands();
+    bool loadConfiguration(const std::string& path);
+    void renderWelcome();
+    void renderSimulation();
+    void renderSchedulerPanel();
+    void renderReadyQueuePanel();
+    void renderTasksPanel();
+    void renderGanttPanel();
+    void renderControls();
+    void exportGanttSvg() const;
 
-    void render();
-    void printGraphic();
-    void printReadyQueue();
-    void printCpus();
-    void printTasks();
 public:
-    Application();
-
+    Application() = default;
     void start();
 };
 
-
-#endif //SIMULADOR_ESCALONAMENTO_APPLICATION_H
+#endif // SIMULADOR_ESCALONAMENTO_APPLICATION_H
