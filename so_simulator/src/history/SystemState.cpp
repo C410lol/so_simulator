@@ -20,19 +20,19 @@ SystemState::SystemState(
 void SystemState::copyTasks(const std::vector<Task*>& _tasks)
 {
     for (Task* task: _tasks)
-        tasks.push_back(TaskDTO(task));
+        tasks.emplace_back(task);
 }
 
 void SystemState::copyInstances(const std::vector<TaskInstance*>& _instances)
 {
     for (TaskInstance* instance: _instances)
-        instances.push_back(TaskInstanceDTO(instance));
+        instances.emplace_back(instance);
 }
 
 void SystemState::copyCpus(const std::vector<CPU*>& _cpus)
 {
     for (CPU* cpu: _cpus)
-        cpus.push_back(CpuDTO(cpu));
+        cpus.emplace_back(cpu);
 }
 
 
