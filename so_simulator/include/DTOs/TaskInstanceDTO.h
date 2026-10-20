@@ -15,7 +15,9 @@ public:
     int executedTime;
     int currentQuantum;
     TaskState state;
+    int finishedTime;
     bool deadlineMissed;
+    int deadlineMissedTime;
 
     explicit TaskInstanceDTO(const TaskInstance* instance)
     {
@@ -30,7 +32,9 @@ public:
         executedTime = instance->getExecutedTime();
         currentQuantum = instance->getCurrentQuantum();
         state = instance->getTaskState();
+        finishedTime = instance->getFinishedTime();
         deadlineMissed = instance->isDeadlineMissed();
+        deadlineMissedTime = instance->getDeadlineMissedTime();
     }
 };
 
