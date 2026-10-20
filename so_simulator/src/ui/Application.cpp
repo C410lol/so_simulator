@@ -61,7 +61,6 @@ bool Application::loadConfiguration(const std::string& path)
     }
 
     configPath = path;
-    simulation.prerun();
     initialized = true;
     showConfigError = false;
     ganttExported = false;
@@ -248,6 +247,8 @@ void Application::renderTasksPanel()
 
 void Application::renderControls()
 {
+    simulation.prerun();
+
     ImGui::SeparatorText("Controles");
     const bool finished = simulation.isSimulationFinished();
     if (ImGui::Button("Voltar", ImVec2(-1, 34)) && simulation.canGoBack())
@@ -256,7 +257,6 @@ void Application::renderControls()
     if (ImGui::Button("Avançar um tick", ImVec2(-1, 34)))
     {
         simulation.run();
-        simulation.prerun();
         if (simulation.isSimulationFinished())
         {
             exportGanttSvg();
@@ -310,7 +310,7 @@ void Application::renderGanttPanel()
     const float chartTop = yAxis + 16.0f;
     const float chartLeft = origin.x + labelWidth;
 
-    for (int tick = 0; tick <= tickCount; ++tick)
+    for (int tick = 0; tick <= simulation.getCurrentClock() + 1; ++tick)
     {
         const float x = chartLeft + tick * cellWidth;
         draw->AddLine(ImVec2(x, yAxis), ImVec2(x, chartTop + tasks.size() * rowHeight), IM_COL32(54, 65, 82, 255));
@@ -327,31 +327,42 @@ void Application::renderGanttPanel()
         const float y = chartTop + row * rowHeight;
         draw->AddText(ImVec2(origin.x + 4, y + 8), taskColor(task->getColor()),
                       ("T" + std::to_string(task->getId())).c_str());
-        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + tickCount * cellWidth, y + rowHeight),
+        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, y + rowHeight),
+                      IM_COL32(39, 47, 61, 255));
+        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, y + rowHeight),
                       IM_COL32(39, 47, 61, 255));
     }
 
-    const int lastState = std::min(history.getCurrentIndex(), static_cast<int>(states.size()) - 1);
+    const int lastState = static_cast<int>(states.size()) - 1;
     for (int stateIndex = 0; stateIndex <= lastState; ++stateIndex)
     {
         const SystemState& state = states[stateIndex];
+
+        /*
         if (stateIndex < lastState && states[stateIndex + 1].getClock() == state.getClock())
             continue; // Several manual edits may be recorded without advancing the clock.
+        */
+
         const int tick = state.getClock();
-        if (tick < 0 || tick > simulation.getCurrentClock()) continue;
+
         std::unordered_map<int, int> taskForInstance;
         for (TaskInstanceDTO instance : state.getInstances())
             taskForInstance[instance.id] = instance.taskId;
 
-        if (tick < simulation.getCurrentClock()) for (CpuDTO cpu : state.getCpus())
+        for (CpuDTO cpu : state.getCpus())
         {
-            if (!cpu.active || cpu.currentTaskId == 0 || !taskForInstance.contains(cpu.currentTaskId)) continue;
-            const int taskId = taskForInstance[cpu.currentTaskId];
-            if (!rowByTask.contains(taskId)) continue;
+            if (!cpu.active || !taskForInstance.contains(cpu.currentInstanceId))
+                continue;
+
+            const int taskId = taskForInstance[cpu.currentInstanceId];
+            if (!rowByTask.contains(taskId))
+                continue;
+
             const int row = rowByTask[taskId];
             const Task* task = *std::find_if(tasks.begin(), tasks.end(), [taskId](const Task* item) {
                 return item->getId() == taskId;
             });
+
             const ImVec2 min(chartLeft + tick * cellWidth + 2, chartTop + row * rowHeight + 4);
             const ImVec2 max(min.x + cellWidth - 4, min.y + rowHeight - 8);
             draw->AddRectFilled(min, max, taskColor(task->getColor()), 4.0f);
@@ -362,16 +373,16 @@ void Application::renderGanttPanel()
         for (TaskInstanceDTO instance : state.getInstances())
         {
             const auto rowIt = rowByTask.find(instance.taskId);
-            if (rowIt == rowByTask.end()) continue;
+            //if (rowIt == rowByTask.end()) continue;
             const float x = chartLeft + tick * cellWidth;
             const float y = chartTop + rowIt->second * rowHeight;
             if (instance.activationTime == tick)
                 draw->AddTriangleFilled(ImVec2(x + 4, y + 4), ImVec2(x + 12, y + 4), ImVec2(x + 8, y + 12),
                                         IM_COL32(93, 199, 255, 255));
-            if (instance.state == TaskState::FINISHED)
+            if (instance.state == TaskState::FINISHED && instance.finishedTime == state.getClock())
                 draw->AddText(ImVec2(x + 3, y + 16), IM_COL32(108, 230, 170, 255), "✓");
-            if (instance.deadlineMissed)
-                draw->AddText(ImVec2(x + 20, y + 16), IM_COL32(255, 88, 82, 255), "!");
+            if (instance.deadlineMissed && instance.deadlineMissedTime == state.getClock())
+                draw->AddText(ImVec2(x + 20, y + 16), IM_COL32(150, 0, 24, 255), "x");
         }
     }
 
@@ -384,7 +395,7 @@ void Application::exportGanttSvg() const
     const History history = simulation.getHistory();
     const auto& states = history.getStates();
     auto tasks = simulation.getTasks();
-    std::sort(tasks.begin(), tasks.end(), [](const Task* a, const Task* b) { return a->getId() < b->getId(); });
+    std::sort(tasks.begin(), tasks.end(), [](const Task* a, const Task* b) { return a->getId() > b->getId(); });
     const int ticks = std::max(1, simulation.getCurrentClock());
     constexpr int left = 100, top = 55, cell = 52, row = 38;
     const int width = left + ticks * cell + 30;
@@ -422,8 +433,8 @@ void Application::exportGanttSvg() const
         for (TaskInstanceDTO instance : state.getInstances()) taskForInstance[instance.id] = instance.taskId;
         if (tick < ticks) for (CpuDTO cpu : state.getCpus())
         {
-            if (!cpu.active || !taskForInstance.contains(cpu.currentTaskId)) continue;
-            const int taskId = taskForInstance[cpu.currentTaskId];
+            if (!cpu.active || !taskForInstance.contains(cpu.currentInstanceId)) continue;
+            const int taskId = taskForInstance[cpu.currentInstanceId];
             const int y = top + taskRows[taskId] * row + 4;
             const auto task = std::find_if(tasks.begin(), tasks.end(), [taskId](const Task* item) { return item->getId() == taskId; });
             if (task == tasks.end()) continue;
@@ -440,12 +451,12 @@ void Application::exportGanttSvg() const
             const int markerY = top + rowIt->second * row + 4;
             if (instance.activationTime == tick)
                 svg << "<path d=\"M" << markerX + 4 << ' ' << markerY + 2 << " l8 8 -8 8 z\" fill=\"#5dc7ff\"/>\n";
-            if (instance.state == TaskState::FINISHED)
+            if (instance.state == TaskState::FINISHED && instance.finishedTime == tick)
                 svg << "<text x=\"" << markerX + 3 << "\" y=\"" << markerY + 28
                     << "\" fill=\"#6ce6aa\" font-family=\"sans-serif\" font-size=\"14\">&#10003;</text>\n";
-            if (instance.deadlineMissed)
+            if (instance.deadlineMissed && instance.deadlineMissedTime == tick)
                 svg << "<text x=\"" << markerX + 20 << "\" y=\"" << markerY + 28
-                    << "\" fill=\"#ff5852\" font-family=\"sans-serif\" font-size=\"14\">!</text>\n";
+                    << "\" fill=\"#960018\" font-family=\"sans-serif\" font-size=\"14\">x</text>\n";
         }
     }
     svg << "</svg>\n";
