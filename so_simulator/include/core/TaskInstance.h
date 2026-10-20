@@ -17,7 +17,9 @@ private:
     int executedTime;
     int currentQuantum;
     TaskState state;
+    int finishedTime;
     bool deadlineMissed;
+    int deadlineMissedTime;
 public:
     TaskInstance(Task* task, int activationTime);
     TaskInstance(const TaskInstanceDTO& instanceDTO);
@@ -31,7 +33,9 @@ public:
     int getExecutedTime() const;
     int getCurrentQuantum() const;
     TaskState getTaskState() const;
+    int getFinishedTime() const;
     bool isDeadlineMissed() const;
+    int getDeadlineMissedTime() const;
 
     //  SETS
     void setTask(Task* _task);
@@ -39,7 +43,9 @@ public:
     void incrementCurrentQuantum();
     void resetCurrentQuantum();
     void setTaskState(TaskState _state);
+    void setFinishedTime(int _finishedTime);
     void setDeadlineMissed(bool _deadlineMissed);
+    void setDeadlineMissedTime(int _deadlineMissedTime);
 };
 
 

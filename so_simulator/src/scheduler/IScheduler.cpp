@@ -1,5 +1,7 @@
 #include "../../include/scheduler/IScheduler.h"
 
+#include <algorithm>
+
 #include "core/CPU.h"
 #include "core/TaskInstance.h"
 
@@ -9,11 +11,18 @@ void IScheduler::schedule(std::vector<TaskInstance*>& readyQueue, std::vector<CP
     for (CPU* cpu: cpus)
     {
         //  If the CPU is running a task, inserts the currently running task at the begging of the ready queue
-        TaskInstance* currentlyInstance;
+        TaskInstance* currentlyInstance = nullptr;
         if (cpu->isActive() && cpu->getTaskInstance() != nullptr)
         {
             currentlyInstance = cpu->getTaskInstance();
             readyQueue.insert(readyQueue.begin(), currentlyInstance);
+        }
+
+        if (readyQueue.empty())
+        {
+            cpu->removeTaskInstance();
+            cpu->setActive(false);
+            continue;
         }
 
         //  Compares istances to choose the best candidate
@@ -22,11 +31,14 @@ void IScheduler::schedule(std::vector<TaskInstance*>& readyQueue, std::vector<CP
         for (int i = 1; i < readyQueue.size(); i++)
             bestCandidate = selectBestCandidate(bestCandidate, readyQueue.at(i), wasRandom);
 
+        readyQueue.erase(std::remove(readyQueue.begin(), readyQueue.end(), bestCandidate), readyQueue.end());
+
         //  If the running task was not selected as the best candidade, we must change its state
         if (currentlyInstance != nullptr && currentlyInstance->getId() != bestCandidate->getId())
             currentlyInstance->setTaskState(TaskState::READY);
 
         cpu->setTaskInstance(bestCandidate);
+        cpu->setActive(true);
         bestCandidate->setTaskState(TaskState::RUNNING);
     }
 }

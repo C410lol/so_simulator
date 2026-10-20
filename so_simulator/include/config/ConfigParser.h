@@ -20,7 +20,8 @@ private:
         std::string quantum;
         std::string cpus;
 
-        //  Extracting fields
+        // The first value names the scheduler; normalize it before validating.
+        std::getline(ss, scheduler, ';');
         std::transform(
             scheduler.begin(),
             scheduler.end(),
@@ -84,8 +85,10 @@ public:
         //  Extract tasks
         while (std::getline(file, line))
         {
-            if (line.empty())
+            if (line.empty() || line.find_first_not_of(" \t\r") == std::string::npos)
                 continue;
+            if (line.back() == '\r')
+                line.pop_back();
             config.tasks.push_back(extractTaskConfigs(line));
         }
 

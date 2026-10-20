@@ -31,9 +31,9 @@ public:
 
     int getClock() const;
     bool getSchedulingWasRandom() const;
-    std::vector<TaskDTO> getTasks();
-    std::vector<TaskInstanceDTO> getInstances();
-    std::vector<CpuDTO> getCpus();
+    std::vector<TaskDTO> getTasks() const;
+    std::vector<TaskInstanceDTO> getInstances() const;
+    std::vector<CpuDTO> getCpus() const;
 };
 
 

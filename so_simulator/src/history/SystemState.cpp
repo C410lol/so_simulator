@@ -20,19 +20,19 @@ SystemState::SystemState(
 void SystemState::copyTasks(const std::vector<Task*>& _tasks)
 {
     for (Task* task: _tasks)
-        tasks.push_back(TaskDTO(task));
+        tasks.emplace_back(task);
 }
 
 void SystemState::copyInstances(const std::vector<TaskInstance*>& _instances)
 {
     for (TaskInstance* instance: _instances)
-        instances.push_back(TaskInstanceDTO(instance));
+        instances.emplace_back(instance);
 }
 
 void SystemState::copyCpus(const std::vector<CPU*>& _cpus)
 {
     for (CPU* cpu: _cpus)
-        cpus.push_back(CpuDTO(cpu));
+        cpus.emplace_back(cpu);
 }
 
 
@@ -40,6 +40,6 @@ void SystemState::copyCpus(const std::vector<CPU*>& _cpus)
 
 int SystemState::getClock() const { return clock; }
 bool SystemState::getSchedulingWasRandom() const { return schedulingWasRandom; }
-std::vector<TaskDTO> SystemState::getTasks() { return tasks; }
-std::vector<TaskInstanceDTO> SystemState::getInstances() { return instances; }
-std::vector<CpuDTO> SystemState::getCpus() { return cpus; }
+std::vector<TaskDTO> SystemState::getTasks() const { return tasks; }
+std::vector<TaskInstanceDTO> SystemState::getInstances() const { return instances; }
+std::vector<CpuDTO> SystemState::getCpus() const { return cpus; }
