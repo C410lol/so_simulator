@@ -21,6 +21,7 @@ private:
     void renderWelcome();
     void renderSimulation();
     void renderSchedulerPanel();
+    void renderCpusPanel();
     void renderReadyQueuePanel();
     void renderTasksPanel();
     void renderGanttPanel();
