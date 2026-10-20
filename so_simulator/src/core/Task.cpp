@@ -40,5 +40,4 @@ void Task::setFinished(bool _finished) { finished = _finished; }
 void Task::addInstance(TaskInstance *instance)
 {
     instances.push_back(instance);
-    incrementActivationCount();
 }
