@@ -8,13 +8,11 @@ History::History():currentIndex(0) {}
 
 void History::save(const SystemState& state, int clock)
 {
-    if (clock < currentIndex)
-    {
+    if (static_cast<int>(states.size()) == clock)
+        states.push_back(state);
+    else
         states.at(clock) = state;
-        return;
-    }
-    states.push_back(state);
-    currentIndex++;
+    currentIndex = clock;
 }
 
 SystemState& History::previous()
