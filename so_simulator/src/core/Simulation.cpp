@@ -12,13 +12,13 @@
 
 Simulation::Simulation(std::string filePath):
 clock(0), quantum(0), shouldCallScheduler(false),
-schedulingWasRandom(false)
+schedulingWasRandom(false), prerunRunned(false)
 {
     initialize(std::move(filePath));
 }
 Simulation::Simulation():
 clock(0), quantum(0), shouldCallScheduler(false),
-schedulingWasRandom(false) {}
+schedulingWasRandom(false), prerunRunned(false) {}
 
 Simulation::~Simulation()
 {
@@ -131,7 +131,7 @@ void Simulation::loadCpus(const std::vector<CpuDTO>& _cpus)
         CPU* newCPU = new CPU(cpuDTO);
 
         //  Since we stored just the instance id, we must find the object itself and point to it
-        newCPU->setTaskInstance(findInstanceById(cpuDTO.currentTaskId));
+        newCPU->setTaskInstance(findInstanceById(cpuDTO.currentInstanceId));
 
         cpus.push_back(newCPU);
     }
@@ -175,6 +175,9 @@ TaskInstance* Simulation::findInstanceById(int id)
 
 void Simulation::prerun()
 {
+    if (prerunRunned)
+        return;
+
     checkInstancesExecution();
     checkInstancesDeadlines();
     checkTasksArrivals();
@@ -183,6 +186,8 @@ void Simulation::prerun()
         callScheduler();
 
     saveToHistory();
+
+    prerunRunned = true;
 }
 
 void Simulation::back()
@@ -197,11 +202,7 @@ void Simulation::runAll()
 {
     while (!isFinished())
     {
-        const auto& savedStates = history.getStates();
-        if (savedStates.empty() || savedStates.back().getClock() != clock)
-            prerun();
-        if (isFinished())
-            break;
+        prerun();
         run();
     }
 }
@@ -211,6 +212,8 @@ void Simulation::run()
     executeInstances();
     tick();
     unsetCallScheduler();
+
+    prerunRunned = false;
 }
 
 
@@ -267,6 +270,7 @@ void Simulation::checkInstancesExecution()
         if (instance->getExecutedTime() >= task->getDuration())
         {
             instance->setTaskState(TaskState::FINISHED);
+            instance->setFinishedTime(clock);
 
             //  If the task of the instance reached the limit of times of activation, we set as finished
             if (instance->getTask()->activatedLimitOfTimes())
@@ -286,8 +290,15 @@ void Simulation::checkInstancesDeadlines()
 {
     for (TaskInstance* instance: instances)
         //  Checking if the instance missed its deadline
-        if (instance->getTaskState() != TaskState::FINISHED && clock > instance->getAbsoluteDeadline())
+        if (
+            instance->getTaskState() != TaskState::FINISHED &&
+            clock >= instance->getAbsoluteDeadline()
+            && !instance->isDeadlineMissed()
+        )
+        {
             instance->setDeadlineMissed(true);
+            instance->setDeadlineMissedTime(clock);
+        }
 }
 
 void Simulation::checkTasksArrivals()
@@ -357,7 +368,7 @@ void Simulation::executeInstances()
 void Simulation::saveToHistory()
 {
     const SystemState currentSystemState(clock, schedulingWasRandom, tasks, instances, cpus);
-    history.save(currentSystemState);
+    history.save(currentSystemState, clock);
 }
 
 /*
@@ -455,7 +466,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         }
     }
 
-    readyQueue.erase(std::remove(readyQueue.begin(), readyQueue.end(), instance), readyQueue.end());
+    std::erase(readyQueue, instance);
 
     if (state == TaskState::READY)
     {
@@ -474,21 +485,20 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         {
             assignedCpu->removeTaskInstance();
             assignedCpu->setActive(false);
+            callScheduler();
         }
         instance->setTaskState(TaskState::FINISHED);
         if (instance->getTask()->activatedLimitOfTimes())
             instance->getTask()->setFinished(true);
-        setCallScheduler();
-        callScheduler();
-        unsetCallScheduler();
     }
     else
     {
         CPU* targetCpu = assignedCpu;
         if (targetCpu == nullptr)
         {
-            const auto idleCpu = std::find_if(cpus.begin(), cpus.end(), [](const CPU* cpu) {
-                return !cpu->isActive() || cpu->getTaskInstance() == nullptr;
+            const auto idleCpu =
+                std::find_if(cpus.begin(), cpus.end(), [](const CPU* cpu) {
+                    return !cpu->isActive() || cpu->getTaskInstance() == nullptr;
             });
             targetCpu = idleCpu != cpus.end() ? *idleCpu : cpus.back();
         }

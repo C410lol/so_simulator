@@ -18,6 +18,8 @@ private:
     bool shouldCallScheduler;
     bool schedulingWasRandom;
 
+    bool prerunRunned;
+
     std::vector<Task*> tasks;
     std::vector<TaskInstance*> instances;
     std::vector<CPU*> cpus;
