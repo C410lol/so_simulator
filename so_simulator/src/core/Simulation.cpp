@@ -94,6 +94,8 @@ void Simulation::loadTasks(const Config& config)
 */
 void Simulation::loadTasks(const std::vector<TaskDTO>& _tasks)
 {
+    for (Task* task: tasks)
+        delete task;
     tasks.clear();
 
     for (const TaskDTO& taskDTO: _tasks)
@@ -105,6 +107,8 @@ void Simulation::loadTasks(const std::vector<TaskDTO>& _tasks)
 */
 void Simulation::loadInstances(const std::vector<TaskInstanceDTO>& _instances)
 {
+    for (TaskInstance* instance: instances)
+        delete instance;
     instances.clear();
 
     for (TaskInstanceDTO instanceDTO: _instances)
@@ -124,6 +128,8 @@ void Simulation::loadInstances(const std::vector<TaskInstanceDTO>& _instances)
 */
 void Simulation::loadCpus(const std::vector<CpuDTO>& _cpus)
 {
+    for (CPU* cpu: cpus)
+        delete cpu;
     cpus.clear();
 
     for (CpuDTO cpuDTO: _cpus)
@@ -316,6 +322,9 @@ void Simulation::checkTasksArrivals()
             TaskInstance* instance = new TaskInstance(task, clock);
 
             task->addInstance(instance);
+            task->incrementActivationCount();
+
+
             instances.push_back(instance);
             readyQueue.push_back(instance);
 
