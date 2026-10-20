@@ -181,7 +181,9 @@ void Application::renderReadyQueuePanel()
         ImGui::TextDisabled("Fila vazia");
     for (const TaskInstance* instance : ready)
     {
-        if (instance == nullptr || instance->getTask() == nullptr) continue;
+        if (instance == nullptr || instance->getTask() == nullptr)
+            continue;
+
         ImGui::PushStyleColor(ImGuiCol_Text, taskColorVec(instance->getTask()->getColor()));
         ImGui::BulletText("T%d.%d  |  prazo %d  |  executado %d/%d",
             instance->getTask()->getId(), instance->getInstanceNumber(),
@@ -199,7 +201,9 @@ void Application::renderTasksPanel()
     const auto tasks = simulation.getTasks();
     for (Task* task : tasks)
     {
-        if (task == nullptr) continue;
+        if (task == nullptr)
+            continue;
+
         const std::string label = "Tarefa T" + std::to_string(task->getId());
         if (ImGui::TreeNode(label.c_str()))
         {
@@ -265,6 +269,7 @@ void Application::renderControls()
     }
     if (ImGui::Button("Rodar tudo", ImVec2(-1, 34)))
     {
+        simulation.run();
         simulation.runAll();
         exportGanttSvg();
         ganttExported = true;
