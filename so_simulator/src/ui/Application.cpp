@@ -142,6 +142,8 @@ void Application::renderSimulation()
     ImGui::BeginChild("Painel lateral", ImVec2(sideWidth, -1), ImGuiChildFlags_Borders);
     renderSchedulerPanel();
     ImGui::Spacing();
+    renderCpusPanel();
+    ImGui::Spacing();
     renderReadyQueuePanel();
     ImGui::Spacing();
     renderTasksPanel();
@@ -168,6 +170,44 @@ void Application::renderSchedulerPanel()
 
         ImGui::Text("Processadores: %zu", simulation.getCpus().size());
         ImGui::Text("Estado: %s", simulation.isSimulationFinished() ? "Concluído" : "Em execução");
+    }
+}
+
+void Application::renderCpusPanel()
+{
+    if (!ImGui::CollapsingHeader("CPUs", ImGuiTreeNodeFlags_DefaultOpen))
+        return;
+
+    const auto cpus = simulation.getCpus();
+    if (cpus.empty())
+    {
+        ImGui::TextDisabled("Nenhuma CPU disponível");
+        return;
+    }
+
+    for (const CPU* cpu : cpus)
+    {
+        if (cpu == nullptr)
+            continue;
+
+        const TaskInstance* instance = cpu->getTaskInstance();
+        const bool isExecuting = cpu->isActive() && instance != nullptr && instance->getTask() != nullptr;
+
+        ImGui::PushID(cpu->getId());
+        ImGui::Text("CPU %d", cpu->getId());
+        ImGui::SameLine(76.0f);
+        if (isExecuting)
+        {
+            ImGui::TextColored(taskColorVec(instance->getTask()->getColor()), "Executando T%d.%d",
+                instance->getTask()->getId(), instance->getInstanceNumber());
+        }
+        else
+        {
+            ImGui::TextDisabled("Inativa");
+        }
+        ImGui::Text("Ticks ociosos: %d", cpu->getIdleTicks());
+        ImGui::Separator();
+        ImGui::PopID();
     }
 }
 
@@ -311,18 +351,21 @@ void Application::renderGanttPanel()
                       ImGuiWindowFlags_HorizontalScrollbar);
     ImDrawList* draw = ImGui::GetWindowDrawList();
     const ImVec2 origin = ImGui::GetCursorScreenPos();
-    const float yAxis = origin.y + 28.0f;
-    const float chartTop = yAxis + 16.0f;
+    const float chartTop = origin.y + 12.0f;
+    const float chartBottom = chartTop + tasks.size() * rowHeight;
     const float chartLeft = origin.x + labelWidth;
 
     for (int tick = 0; tick <= simulation.getCurrentClock() + 1; ++tick)
     {
         const float x = chartLeft + tick * cellWidth;
-        draw->AddLine(ImVec2(x, yAxis), ImVec2(x, chartTop + tasks.size() * rowHeight), IM_COL32(54, 65, 82, 255));
+        draw->AddLine(ImVec2(x, chartTop), ImVec2(x, chartBottom), IM_COL32(54, 65, 82, 255));
         char label[24];
         std::snprintf(label, sizeof(label), "%d", tick);
-        draw->AddText(ImVec2(x + 4, origin.y + 3), IM_COL32(170, 182, 201, 255), label);
+        draw->AddText(ImVec2(x + 4, chartBottom + 5), IM_COL32(170, 182, 201, 255), label);
     }
+    draw->AddLine(ImVec2(chartLeft, chartBottom),
+                  ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, chartBottom),
+                  IM_COL32(120, 133, 153, 255));
 
     std::unordered_map<int, int> rowByTask;
     for (size_t row = 0; row < tasks.size(); ++row)
@@ -391,7 +434,7 @@ void Application::renderGanttPanel()
         }
     }
 
-    ImGui::Dummy(ImVec2(contentWidth, chartTop - origin.y + tasks.size() * rowHeight + 10));
+    ImGui::Dummy(ImVec2(contentWidth, chartBottom - origin.y + 24));
     ImGui::EndChild();
 }
 
@@ -404,7 +447,8 @@ void Application::exportGanttSvg() const
     const int ticks = std::max(1, simulation.getCurrentClock());
     constexpr int left = 100, top = 55, cell = 52, row = 38;
     const int width = left + ticks * cell + 30;
-    const int height = top + static_cast<int>(tasks.size()) * row + 36;
+    const int chartBottom = top + static_cast<int>(tasks.size()) * row;
+    const int height = chartBottom + 36;
 
     std::ofstream svg("gantt-final.svg", std::ios::trunc);
     if (!svg) return;
@@ -422,10 +466,12 @@ void Application::exportGanttSvg() const
             << "\" font-family=\"sans-serif\" font-size=\"14\">T" << tasks[i]->getId() << "</text>\n";
     }
     for (int tick = 0; tick <= ticks; ++tick)
-        svg << "<line x1=\"" << left + tick * cell << "\" y1=\"" << top - 12 << "\" x2=\""
-            << left + tick * cell << "\" y2=\"" << height - 20 << "\" stroke=\"#364152\"/>\n"
-            << "<text x=\"" << left + tick * cell + 4 << "\" y=\"" << top - 18
+        svg << "<line x1=\"" << left + tick * cell << "\" y1=\"" << top << "\" x2=\""
+            << left + tick * cell << "\" y2=\"" << chartBottom << "\" stroke=\"#364152\"/>\n"
+            << "<text x=\"" << left + tick * cell + 4 << "\" y=\"" << chartBottom + 16
             << "\" fill=\"#aab6c9\" font-family=\"sans-serif\" font-size=\"11\">" << tick << "</text>\n";
+    svg << "<line x1=\"" << left << "\" y1=\"" << chartBottom << "\" x2=\""
+        << left + (ticks + 1) * cell << "\" y2=\"" << chartBottom << "\" stroke=\"#788599\"/>\n";
 
     for (int stateIndex = 0; stateIndex <= history.getCurrentIndex(); ++stateIndex)
     {
