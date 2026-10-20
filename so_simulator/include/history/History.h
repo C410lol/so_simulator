@@ -16,7 +16,7 @@ private:
 public:
     History();
 
-    void save(const SystemState& state);
+    void save(const SystemState& state, int clock);
     SystemState& previous();
     const std::vector<SystemState>& getStates() const;
     int getCurrentIndex() const;

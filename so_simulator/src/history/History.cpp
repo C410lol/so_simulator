@@ -1,16 +1,20 @@
 #include "../../include/history/History.h"
 
 
-History::History():currentIndex(-1) {}
+History::History():currentIndex(0) {}
 
 
 
 
-void History::save(const SystemState& state)
+void History::save(const SystemState& state, int clock)
 {
-    states.erase(states.begin() + currentIndex + 1, states.end());
+    if (clock < currentIndex)
+    {
+        states.at(clock) = state;
+        return;
+    }
     states.push_back(state);
-    currentIndex = static_cast<int>(states.size()) - 1;
+    currentIndex++;
 }
 
 SystemState& History::previous()
@@ -18,7 +22,10 @@ SystemState& History::previous()
     if (states.empty())
         throw std::out_of_range("Ainda não há estados para voltar.");
     if (currentIndex > 0)
+    {
         --currentIndex;
+        states.erase(states.begin() + currentIndex + 1, states.end());
+    }
     return states.at(currentIndex);
 }
 
