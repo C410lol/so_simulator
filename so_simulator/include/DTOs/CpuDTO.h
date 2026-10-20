@@ -6,10 +6,10 @@
 class CpuDTO
 {
 public:
-    int id{};
-    bool active{};
-    int idleTicks{};
-    int currentTaskId{};
+    int id;
+    bool active;
+    int idleTicks;
+    int currentInstanceId;
 
     explicit CpuDTO(const CPU* cpu)
     {
@@ -21,7 +21,7 @@ public:
         idleTicks = cpu->getIdleTicks();
 
         if (cpu->isActive() && cpu->getTaskInstance() != nullptr)
-            currentTaskId = cpu->getTaskInstance()->getId();
+            currentInstanceId = cpu->getTaskInstance()->getId();
     }
 };
 
