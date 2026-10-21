@@ -16,6 +16,15 @@ protected:
 public:
     virtual ~IScheduler() = default;
 
+    TaskInstance* selectBestFrom(
+        const std::vector<TaskInstance*>& candidates,
+        bool& wasRandom
+    );
+    TaskInstance* selectLowestPriorityFrom(
+        const std::vector<TaskInstance*>& candidates,
+        bool& wasRandom
+    );
+
     virtual void schedule(
         std::vector<TaskInstance*>& readyQueue,
         std::vector<CPU*>& cpus,

@@ -6,6 +6,47 @@
 #include "core/TaskInstance.h"
 
 
+/*
+    Returns the best candidate from an especific vector
+*/
+TaskInstance* IScheduler::selectBestFrom(
+    const std::vector<TaskInstance*>& candidates,
+    bool& wasRandom
+)
+{
+    if (candidates.empty())
+        return nullptr;
+
+    TaskInstance* bestCandidate = candidates.front();
+    for (std::size_t i = 1; i < candidates.size(); ++i)
+        bestCandidate = selectBestCandidate(bestCandidate, candidates[i], wasRandom);
+
+    return bestCandidate;
+}
+
+/*
+    Returns the lowest priority instance from an epecific vector
+*/
+TaskInstance* IScheduler::selectLowestPriorityFrom(
+    const std::vector<TaskInstance*>& candidates,
+    bool& wasRandom
+)
+{
+    if (candidates.empty())
+        return nullptr;
+
+    TaskInstance* lowestPriority = candidates.front();
+    for (std::size_t i = 1; i < candidates.size(); ++i)
+    {
+        TaskInstance* candidate = candidates[i];
+        TaskInstance* preferred = selectBestCandidate(lowestPriority, candidate, wasRandom);
+        lowestPriority = preferred == lowestPriority ? candidate : lowestPriority;
+    }
+
+    return lowestPriority;
+}
+
+
 void IScheduler::schedule(std::vector<TaskInstance*>& readyQueue, std::vector<CPU*>& cpus, bool& wasRandom)
 {
     for (CPU* cpu: cpus)
