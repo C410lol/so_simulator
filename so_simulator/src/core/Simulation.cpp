@@ -446,6 +446,7 @@ std::string Simulation::getLastError() const { return lastError; }
 
 bool Simulation::setInstanceState(const int instanceId, const TaskState state, std::string& error)
 {
+    // Resolve the instance in the current simulation state before changing anything
     TaskInstance* instance = findInstanceById(instanceId);
     if (instance == nullptr)
     {
@@ -454,6 +455,8 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
     }
     if (instance->getTaskState() == state)
         return true;
+
+    // Only allow states that can be assigned manually, and keep finished instances final
     if (state != TaskState::READY && state != TaskState::RUNNING && state != TaskState::FINISHED)
     {
         error = "O estado solicitado não é suportado pelo simulador.";
@@ -465,6 +468,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         return false;
     }
 
+    // Find the CPU currently hosting this instance, if it is running
     CPU* assignedCpu = nullptr;
     for (CPU* cpu : cpus)
     {
@@ -475,10 +479,12 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         }
     }
 
+    // Remove the instance in the ready queue before applying the requested state
     std::erase(readyQueue, instance);
 
     if (state == TaskState::READY)
     {
+        // Free its CPU, then enqueue it so the scheduler can choose what runs next
         if (assignedCpu != nullptr)
         {
             assignedCpu->removeTaskInstance();
@@ -490,6 +496,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
     }
     else if (state == TaskState::FINISHED)
     {
+        // Release the CPU and let the scheduler fill it before marking completion
         if (assignedCpu != nullptr)
         {
             assignedCpu->removeTaskInstance();
@@ -502,6 +509,8 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
     }
     else
     {
+        // Reuse the instance's CPU when possible; otherwise select an idle CPU,
+        // falling back to the last CPU if all CPUs are occupied
         CPU* targetCpu = assignedCpu;
         if (targetCpu == nullptr)
         {
@@ -514,6 +523,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
 
         if (targetCpu->isActive() && targetCpu->getTaskInstance() != nullptr && targetCpu->getTaskInstance() != instance)
         {
+            // Return the displaced instance to the ready queue before taking over
             TaskInstance* displaced = targetCpu->getTaskInstance();
             displaced->setTaskState(TaskState::READY);
             readyQueue.push_back(displaced);
@@ -524,6 +534,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         unsetCallScheduler();
     }
 
+    // Record the updated simulation state
     saveToHistory();
     error.clear();
     return true;
