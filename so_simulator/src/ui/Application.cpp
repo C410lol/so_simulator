@@ -21,12 +21,15 @@
 
 namespace
 {
+    // Convert task color strings into the packed format used by ImGui.
     ImU32 taskColor(const std::string& value)
     {
         unsigned int rgb = 0x808080;
         std::string hex = value;
+        // Accept both RGB forms with and without the leading '#'.
         if (!hex.empty() && hex.front() == '#')
             hex.erase(hex.begin());
+        // Keep the fallback gray when the input is not a six-digit color.
         if (hex.size() == 6)
         {
             std::stringstream parser;
@@ -53,6 +56,7 @@ namespace
 
 bool Application::loadConfiguration(const std::string& path)
 {
+    // Keep the welcome screen active if initialization fails, and retain its error for display.
     if (!simulation.initialize(path))
     {
         configError = simulation.getLastError();
@@ -74,11 +78,13 @@ void Application::start()
     SetTargetFPS(60);
     rlImGuiSetup(true);
 
+    // Drive the Raylib frame loop and render the appropriate screen through ImGui.
     while (!WindowShouldClose())
     {
         BeginDrawing();
         ClearBackground(Color{15, 19, 28, 255});
         rlImGuiBegin();
+        // Show controls only after a configuration has initialized the simulation.
         if (initialized)
             renderSimulation();
         else
@@ -103,6 +109,7 @@ void Application::renderWelcome()
     ImGui::TextWrapped("Deseja escolher um arquivo TXT de configuração próprio?");
     ImGui::Spacing();
 
+    // Open a filtered file picker and load the selection when the dialog returns a path.
     if (ImGui::Button("Escolher arquivo TXT", ImVec2(-1, 44)))
     {
         const char* filters[] = {"*.txt"};
@@ -116,6 +123,7 @@ void Application::renderWelcome()
     if (ImGui::Button("Sair", ImVec2(-1, 38)))
         CloseWindow();
 
+    // Display initialization errors here so users can choose another configuration.
     if (showConfigError)
     {
         ImGui::Spacing();
@@ -138,6 +146,7 @@ void Application::renderSimulation()
     ImGui::TextDisabled("Configuração: %s", configPath.c_str());
     ImGui::Separator();
 
+    // Keep status and controls in a fixed-width column beside the resizable Gantt area.
     const float sideWidth = 350.0f;
     ImGui::BeginChild("Painel lateral", ImVec2(sideWidth, -1), ImGuiChildFlags_Borders);
     renderSchedulerPanel();
@@ -161,6 +170,7 @@ void Application::renderSimulation()
 
 void Application::renderSchedulerPanel()
 {
+    // Update the active scheduler immediately when the selection changes.
     if (ImGui::CollapsingHeader("Escalonamento", ImGuiTreeNodeFlags_DefaultOpen))
     {
         int selected = simulation.getSchedulerName() == "RM" ? 0 : 1;
@@ -175,6 +185,7 @@ void Application::renderSchedulerPanel()
 
 void Application::renderCpusPanel()
 {
+    // Skip the panel contents while the section is collapsed.
     if (!ImGui::CollapsingHeader("CPUs", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
@@ -185,6 +196,7 @@ void Application::renderCpusPanel()
         return;
     }
 
+    // Render each processor, ignoring null entries and showing its current assignment.
     for (const CPU* cpu : cpus)
     {
         if (cpu == nullptr)
@@ -213,12 +225,14 @@ void Application::renderCpusPanel()
 
 void Application::renderReadyQueuePanel()
 {
+    // Collapsing the header avoids drawing queue entries when the panel is hidden.
     if (!ImGui::CollapsingHeader("Instâncias na fila de prontos", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
     const auto ready = simulation.getReadyQueue();
     if (ready.empty())
         ImGui::TextDisabled("Fila vazia");
+    // List each valid ready instance with its deadline and remaining execution time.
     for (const TaskInstance* instance : ready)
     {
         if (instance == nullptr || instance->getTask() == nullptr)
@@ -235,6 +249,7 @@ void Application::renderReadyQueuePanel()
 
 void Application::renderTasksPanel()
 {
+    // Each task expands into its parameters and manually editable instances.
     if (!ImGui::CollapsingHeader("Tarefas fixas", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
@@ -257,14 +272,18 @@ void Application::renderTasksPanel()
             const char* stateLabels[] = {"Pronta", "Executando", "Finalizada"};
             for (TaskInstance* instance : task->getInstances())
             {
-                if (instance == nullptr) continue;
+                if (instance == nullptr)
+                    continue;
+
                 ImGui::PushID(instance->getId());
                 ImGui::Text("T%d.%d", task->getId(), instance->getInstanceNumber());
                 ImGui::SameLine();
+
                 int selectedState = static_cast<int>(instance->getTaskState());
                 if (ImGui::Combo("##Estado", &selectedState, stateLabels, IM_ARRAYSIZE(stateLabels)))
                 {
                     std::string error;
+                    // Manual state changes are delegated to Simulation so they enter its history.
                     if (simulation.setInstanceState(instance->getId(), static_cast<TaskState>(selectedState), error))
                     {
                         stateEditMessage = "Estado da instância atualizado e salvo no histórico.";
@@ -291,12 +310,15 @@ void Application::renderTasksPanel()
 
 void Application::renderControls()
 {
+    // Prepare simulation state before enabling the step and run controls.
     simulation.prerun();
 
     ImGui::SeparatorText("Controles");
     const bool finished = simulation.isSimulationFinished();
+    // Only step backward when history contains an earlier simulation state.
     if (ImGui::Button("Voltar", ImVec2(-1, 34)) && simulation.canGoBack())
         simulation.back();
+    // Prevent forward execution once the simulation has reached its end.
     ImGui::BeginDisabled(finished);
     if (ImGui::Button("Avançar um tick", ImVec2(-1, 34)))
     {
@@ -307,6 +329,7 @@ void Application::renderControls()
             ganttExported = true;
         }
     }
+    // Advance once to initialize the run, then complete all remaining ticks.
     if (ImGui::Button("Rodar tudo", ImVec2(-1, 34)))
     {
         simulation.run();
@@ -315,6 +338,7 @@ void Application::renderControls()
         ganttExported = true;
     }
     ImGui::EndDisabled();
+    // Allow exporting the current chart before the simulation finishes.
     if (ImGui::Button("Exportar Gantt como SVG", ImVec2(-1, 34)))
     {
         exportGanttSvg();
@@ -336,6 +360,7 @@ void Application::renderGanttPanel()
     ImGui::SameLine(); ImGui::Text("bloco colorido = execução   |   contorno cinza = ocioso   |   ! = prazo perdido");
     ImGui::SameLine(); ImGui::Text("   ◆ chegada   ✓ conclusão");
 
+    // Use saved snapshots so the chart follows the same timeline as back navigation.
     History history = simulation.getHistory();
     const auto& states = history.getStates();
     auto tasks = simulation.getTasks();
@@ -352,9 +377,10 @@ void Application::renderGanttPanel()
     ImDrawList* draw = ImGui::GetWindowDrawList();
     const ImVec2 origin = ImGui::GetCursorScreenPos();
     const float chartTop = origin.y + 12.0f;
-    const float chartBottom = chartTop + tasks.size() * rowHeight;
+    const float chartBottom = chartTop + (tasks.size() + 1) * rowHeight;
     const float chartLeft = origin.x + labelWidth;
 
+    // Draw tick boundaries and labels across the full visible timeline.
     for (int tick = 0; tick <= simulation.getCurrentClock() + 1; ++tick)
     {
         const float x = chartLeft + tick * cellWidth;
@@ -367,12 +393,18 @@ void Application::renderGanttPanel()
                   ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, chartBottom),
                   IM_COL32(120, 133, 153, 255));
 
+    draw->AddText(ImVec2(origin.x + 4, chartTop + 8), IM_COL32(170, 182, 201, 255), "Aleatório");
+    draw->AddLine(ImVec2(chartLeft, chartTop + rowHeight),
+                  ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, chartTop + rowHeight),
+                  IM_COL32(39, 47, 61, 255));
+
     std::unordered_map<int, int> rowByTask;
+    // Reserve row zero for random-scheduling markers; task rows start below it.
     for (size_t row = 0; row < tasks.size(); ++row)
     {
         const Task* task = tasks[row];
-        rowByTask[task->getId()] = static_cast<int>(row);
-        const float y = chartTop + row * rowHeight;
+        rowByTask[task->getId()] = static_cast<int>(row) + 1;
+        const float y = chartTop + (row + 1) * rowHeight;
         draw->AddText(ImVec2(origin.x + 4, y + 8), taskColor(task->getColor()),
                       ("T" + std::to_string(task->getId())).c_str());
         draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, y + rowHeight),
@@ -385,18 +417,20 @@ void Application::renderGanttPanel()
     for (int stateIndex = 0; stateIndex <= lastState; ++stateIndex)
     {
         const SystemState& state = states[stateIndex];
-
-        /*
-        if (stateIndex < lastState && states[stateIndex + 1].getClock() == state.getClock())
-            continue; // Several manual edits may be recorded without advancing the clock.
-        */
-
         const int tick = state.getClock();
+
+        // Mark only ticks whose saved system state records a random scheduling decision.
+        if (state.getSchedulingWasRandom() && tick >= 0 && tick <= simulation.getCurrentClock())
+        {
+            const float x = chartLeft + tick * cellWidth;
+            draw->AddText(ImVec2(x + 4, chartTop + 9), IM_COL32(255, 205, 94, 255), "Sim");
+        }
 
         std::unordered_map<int, int> taskForInstance;
         for (TaskInstanceDTO instance : state.getInstances())
             taskForInstance[instance.id] = instance.taskId;
 
+        // Place a colored execution block in the row for each active CPU.
         for (CpuDTO cpu : state.getCpus())
         {
             if (!cpu.active || !taskForInstance.contains(cpu.currentInstanceId))
@@ -418,10 +452,13 @@ void Application::renderGanttPanel()
                           ("CPU " + std::to_string(cpu.id)).c_str());
         }
 
+        // Add activation, completion, and missed-deadline markers to each task row.
         for (TaskInstanceDTO instance : state.getInstances())
         {
             const auto rowIt = rowByTask.find(instance.taskId);
-            //if (rowIt == rowByTask.end()) continue;
+            if (rowIt == rowByTask.end())
+                continue;
+
             const float x = chartLeft + tick * cellWidth;
             const float y = chartTop + rowIt->second * rowHeight;
             if (instance.activationTime == tick)
@@ -440,6 +477,7 @@ void Application::renderGanttPanel()
 
 void Application::exportGanttSvg() const
 {
+    // Export the current simulation history using the same task and tick layout as the panel.
     const History history = simulation.getHistory();
     const auto& states = history.getStates();
     auto tasks = simulation.getTasks();
@@ -447,9 +485,10 @@ void Application::exportGanttSvg() const
     const int ticks = std::max(1, simulation.getCurrentClock());
     constexpr int left = 100, top = 55, cell = 52, row = 38;
     const int width = left + ticks * cell + 30;
-    const int chartBottom = top + static_cast<int>(tasks.size()) * row;
+    const int chartBottom = top + (static_cast<int>(tasks.size()) + 1) * row;
     const int height = chartBottom + 36;
 
+    // Replace the previous export with a fresh SVG for the current simulation state.
     std::ofstream svg("gantt-final.svg", std::ios::trunc);
     if (!svg) return;
     svg << "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" << width << "\" height=\"" << height
@@ -457,14 +496,22 @@ void Application::exportGanttSvg() const
         << "<rect width=\"100%\" height=\"100%\" fill=\"#0f131c\"/>\n"
         << "<text x=\"16\" y=\"28\" fill=\"#edf2fa\" font-family=\"sans-serif\" font-size=\"18\">Gantt - "
         << simulation.getSchedulerName() << "</text>\n";
+    svg << "<text x=\"16\" y=\"" << top + 24
+        << "\" fill=\"#aab6c9\" font-family=\"sans-serif\" font-size=\"14\">Aleatório</text>\n"
+        << "<line x1=\"" << left << "\" y1=\"" << top + row << "\" x2=\""
+        << left + (ticks + 1) * cell << "\" y2=\"" << top + row << "\" stroke=\"#272f3d\"/>\n";
+
     std::unordered_map<int, int> taskRows;
+    // Match the panel layout by keeping the random-scheduling row above all tasks.
     for (size_t i = 0; i < tasks.size(); ++i)
     {
-        taskRows[tasks[i]->getId()] = static_cast<int>(i);
-        const int y = top + static_cast<int>(i) * row;
+        taskRows[tasks[i]->getId()] = static_cast<int>(i) + 1;
+        const int y = top + (static_cast<int>(i) + 1) * row;
         svg << "<text x=\"16\" y=\"" << y + 24 << "\" fill=\"" << svgColor(tasks[i]->getColor())
             << "\" font-family=\"sans-serif\" font-size=\"14\">T" << tasks[i]->getId() << "</text>\n";
     }
+
+    // Write shared vertical grid lines and tick labels for the SVG chart.
     for (int tick = 0; tick <= ticks; ++tick)
         svg << "<line x1=\"" << left + tick * cell << "\" y1=\"" << top << "\" x2=\""
             << left + tick * cell << "\" y2=\"" << chartBottom << "\" stroke=\"#364152\"/>\n"
@@ -476,28 +523,44 @@ void Application::exportGanttSvg() const
     for (int stateIndex = 0; stateIndex <= history.getCurrentIndex(); ++stateIndex)
     {
         const SystemState& state = states[stateIndex];
+        // For repeated snapshots at one tick, render only the latest saved version.
         if (stateIndex < history.getCurrentIndex() && states[stateIndex + 1].getClock() == state.getClock())
             continue;
+
         const int tick = state.getClock();
-        if (tick < 0 || tick > ticks) continue;
+        if (tick < 0 || tick > ticks)
+            continue;
+
+        if (state.getSchedulingWasRandom())
+            svg << "<text x=\"" << left + tick * cell + 4 << "\" y=\"" << top + 24
+                << "\" fill=\"#ffcd5e\" font-family=\"sans-serif\" font-size=\"12\">Sim</text>\n";
+
         std::unordered_map<int, int> taskForInstance;
         for (TaskInstanceDTO instance : state.getInstances()) taskForInstance[instance.id] = instance.taskId;
+        // The final clock value has no execution interval after it.
         if (tick < ticks) for (CpuDTO cpu : state.getCpus())
         {
-            if (!cpu.active || !taskForInstance.contains(cpu.currentInstanceId)) continue;
+            if (!cpu.active || !taskForInstance.contains(cpu.currentInstanceId))
+                continue;
+
             const int taskId = taskForInstance[cpu.currentInstanceId];
             const int y = top + taskRows[taskId] * row + 4;
             const auto task = std::find_if(tasks.begin(), tasks.end(), [taskId](const Task* item) { return item->getId() == taskId; });
-            if (task == tasks.end()) continue;
+            if (task == tasks.end())
+                continue;
+
             svg << "<rect x=\"" << left + tick * cell + 2 << "\" y=\"" << y << "\" width=\"" << cell - 4
                 << "\" height=\"30\" rx=\"4\" fill=\"" << svgColor((*task)->getColor()) << "\"/>\n"
                 << "<text x=\"" << left + tick * cell + 7 << "\" y=\"" << y + 19
                 << "\" fill=\"#111722\" font-family=\"sans-serif\" font-size=\"11\">CPU " << cpu.id << "</text>\n";
         }
+
         for (TaskInstanceDTO instance : state.getInstances())
         {
             const auto rowIt = taskRows.find(instance.taskId);
-            if (rowIt == taskRows.end()) continue;
+            if (rowIt == taskRows.end())
+                continue;
+
             const int markerX = left + tick * cell;
             const int markerY = top + rowIt->second * row + 4;
             if (instance.activationTime == tick)

@@ -16,6 +16,7 @@ void IScheduler::schedule(std::vector<TaskInstance*>& readyQueue, std::vector<CP
         {
             currentlyInstance = cpu->getTaskInstance();
             readyQueue.insert(readyQueue.begin(), currentlyInstance);
+            currentlyInstance->setTaskState(TaskState::READY);
         }
 
         if (readyQueue.empty())
@@ -31,11 +32,7 @@ void IScheduler::schedule(std::vector<TaskInstance*>& readyQueue, std::vector<CP
         for (int i = 1; i < readyQueue.size(); i++)
             bestCandidate = selectBestCandidate(bestCandidate, readyQueue.at(i), wasRandom);
 
-        readyQueue.erase(std::remove(readyQueue.begin(), readyQueue.end(), bestCandidate), readyQueue.end());
-
-        //  If the running task was not selected as the best candidade, we must change its state
-        if (currentlyInstance != nullptr && currentlyInstance->getId() != bestCandidate->getId())
-            currentlyInstance->setTaskState(TaskState::READY);
+        std::erase(readyQueue, bestCandidate);
 
         cpu->setTaskInstance(bestCandidate);
         cpu->setActive(true);
