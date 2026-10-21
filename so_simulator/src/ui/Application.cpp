@@ -523,10 +523,6 @@ void Application::exportGanttSvg() const
     for (int stateIndex = 0; stateIndex <= history.getCurrentIndex(); ++stateIndex)
     {
         const SystemState& state = states[stateIndex];
-        // For repeated snapshots at one tick, render only the latest saved version.
-        if (stateIndex < history.getCurrentIndex() && states[stateIndex + 1].getClock() == state.getClock())
-            continue;
-
         const int tick = state.getClock();
         if (tick < 0 || tick > ticks)
             continue;
