@@ -74,7 +74,7 @@ target_include_directories(simulator PRIVATE
     "${tinyfiledialogs_SOURCE_DIR}"
 )
 target_compile_definitions(simulator PRIVATE
-    DEFAULT_CONFIG_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config-files/teste1.txt"
+    DEFAULT_CONFIG_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config-files/default.txt"
 )
 target_link_libraries(simulator PRIVATE raylib imgui)
 

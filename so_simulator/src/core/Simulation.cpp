@@ -484,7 +484,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
 
     if (state == TaskState::READY)
     {
-        // Free its CPU, then enqueue it so the scheduler can choose what runs next
+        // Free its CPU and enqueue it, then fill that CPU from the other ready instances.
         if (assignedCpu != nullptr)
         {
             assignedCpu->removeTaskInstance();
@@ -492,7 +492,24 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         }
         instance->setTaskState(TaskState::READY);
         readyQueue.push_back(instance);
-        setCallScheduler();
+
+        //  We must select the best instance to fill the CPU, excluding the one we just removed
+        if (assignedCpu != nullptr && scheduler != nullptr)
+        {
+            std::vector<TaskInstance*> candidates;
+            for (TaskInstance* readyInstance : readyQueue)
+                if (readyInstance != instance)
+                    candidates.push_back(readyInstance);
+
+            TaskInstance* replacement = scheduler->selectBestFrom(candidates, schedulingWasRandom);
+            if (replacement != nullptr)
+            {
+                std::erase(readyQueue, replacement);
+                assignedCpu->setTaskInstance(replacement);
+                assignedCpu->setActive(true);
+                replacement->setTaskState(TaskState::RUNNING);
+            }
+        }
     }
     else if (state == TaskState::FINISHED)
     {
@@ -510,7 +527,7 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
     else
     {
         // Reuse the instance's CPU when possible; otherwise select an idle CPU,
-        // falling back to the last CPU if all CPUs are occupied
+        // preempting the running instance with the lowest scheduler priority when needed.
         CPU* targetCpu = assignedCpu;
         if (targetCpu == nullptr)
         {
@@ -518,16 +535,51 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
                 std::find_if(cpus.begin(), cpus.end(), [](const CPU* cpu) {
                     return !cpu->isActive() || cpu->getTaskInstance() == nullptr;
             });
-            targetCpu = idleCpu != cpus.end() ? *idleCpu : cpus.back();
+            if (idleCpu != cpus.end())
+                targetCpu = *idleCpu;
+            else if (scheduler != nullptr)
+            {
+                //  Selects the CPU that is running the instance with the lowest priority
+                std::vector<TaskInstance*> runningInstances;
+                for (CPU* cpu : cpus)
+                    if (cpu->isActive() && cpu->getTaskInstance() != nullptr)
+                        runningInstances.push_back(cpu->getTaskInstance());
+
+                TaskInstance* lowestPriority =
+                    scheduler->selectLowestPriorityFrom(runningInstances, schedulingWasRandom);
+                const auto lowestPriorityCpu =
+                    std::find_if(cpus.begin(), cpus.end(), [lowestPriority](const CPU* cpu) {
+                    return cpu->getTaskInstance() == lowestPriority;
+                });
+                if (lowestPriorityCpu != cpus.end())
+                    targetCpu = *lowestPriorityCpu;
+            }
+
+            if (targetCpu == nullptr && !cpus.empty())
+                targetCpu = cpus.back();
         }
 
-        if (targetCpu->isActive() && targetCpu->getTaskInstance() != nullptr && targetCpu->getTaskInstance() != instance)
+        if (targetCpu == nullptr)
+        {
+            instance->setTaskState(TaskState::READY);
+            readyQueue.push_back(instance);
+            error = "Não há CPU disponível para executar a instância.";
+            return false;
+        }
+
+        if (
+            targetCpu != nullptr &&
+            targetCpu->isActive() &&
+            targetCpu->getTaskInstance() != nullptr &&
+            targetCpu->getTaskInstance() != instance
+        )
         {
             // Return the displaced instance to the ready queue before taking over
             TaskInstance* displaced = targetCpu->getTaskInstance();
             displaced->setTaskState(TaskState::READY);
             readyQueue.push_back(displaced);
         }
+
         targetCpu->setTaskInstance(instance);
         targetCpu->setActive(true);
         instance->setTaskState(TaskState::RUNNING);

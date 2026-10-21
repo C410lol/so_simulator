@@ -16,7 +16,7 @@
 #include <unordered_map>
 
 #ifndef DEFAULT_CONFIG_PATH
-#define DEFAULT_CONFIG_PATH "config-files/teste1.txt"
+#define DEFAULT_CONFIG_PATH "config-files/default.txt"
 #endif
 
 namespace
@@ -74,7 +74,7 @@ bool Application::loadConfiguration(const std::string& path)
 void Application::start()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-    InitWindow(1280, 720, "Simulador de Escalonamento");
+    InitWindow(1280, 720, "Simulador de Sistema Operacional");
     SetTargetFPS(60);
     rlImGuiSetup(true);
 
@@ -104,7 +104,7 @@ void Application::renderWelcome()
     ImGui::SetNextWindowSize(ImVec2(600, 360), ImGuiCond_Always);
     ImGui::Begin("Simulador de SO", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 
-    ImGui::TextUnformatted("SIMULADOR DE ESCALONAMENTO");
+    ImGui::TextUnformatted("SIMULADOR DE SISTEMA OPERACIONAL");
     ImGui::Separator();
     ImGui::TextWrapped("Deseja escolher um arquivo TXT de configuração próprio?");
     ImGui::Spacing();
@@ -141,7 +141,7 @@ void Application::renderSimulation()
     ImGui::Begin("Simulador", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    ImGui::Text("SIMULADOR DE ESCALONAMENTO    |    Tick %d", simulation.getCurrentClock());
+    ImGui::Text("SIMULADOR DE SISTEMA OPERACIONAL    |    Tick %d", simulation.getCurrentClock());
     ImGui::SameLine();
     ImGui::TextDisabled("Configuração: %s", configPath.c_str());
     ImGui::Separator();
@@ -171,7 +171,7 @@ void Application::renderSimulation()
 void Application::renderSchedulerPanel()
 {
     // Update the active scheduler immediately when the selection changes.
-    if (ImGui::CollapsingHeader("Escalonamento", ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader("Escalonador", ImGuiTreeNodeFlags_DefaultOpen))
     {
         int selected = simulation.getSchedulerName() == "RM" ? 0 : 1;
         const char* algorithms[] = {"RM - Rate Monotonic", "EDF - Earliest Deadline First"};
@@ -226,7 +226,7 @@ void Application::renderCpusPanel()
 void Application::renderReadyQueuePanel()
 {
     // Collapsing the header avoids drawing queue entries when the panel is hidden.
-    if (!ImGui::CollapsingHeader("Instâncias na fila de prontos", ImGuiTreeNodeFlags_DefaultOpen))
+    if (!ImGui::CollapsingHeader("Fila de prontos", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
     const auto ready = simulation.getReadyQueue();
@@ -250,7 +250,7 @@ void Application::renderReadyQueuePanel()
 void Application::renderTasksPanel()
 {
     // Each task expands into its parameters and manually editable instances.
-    if (!ImGui::CollapsingHeader("Tarefas fixas", ImGuiTreeNodeFlags_DefaultOpen))
+    if (!ImGui::CollapsingHeader("Tarefas e Instâncias", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
     const auto tasks = simulation.getTasks();
