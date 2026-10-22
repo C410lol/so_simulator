@@ -17,10 +17,14 @@ public:
     History();
 
     void save(const SystemState& state, int clock);
+    // Remove snapshots after the current position when a new timeline is created.
+    void discardFuture();
     SystemState& previous();
+    SystemState& next();
     const std::vector<SystemState>& getStates() const;
     int getCurrentIndex() const;
     bool canGoBack() const;
+    bool hasFuture() const;
 };
 
 
