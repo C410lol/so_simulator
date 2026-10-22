@@ -12,13 +12,13 @@
 
 Simulation::Simulation(std::string filePath):
 clock(0), quantum(0), shouldCallScheduler(false),
-schedulingWasRandom(false), prerunRunned(false)
+schedulingWasRandom(false), prerunRunned(false), restoreNextHistoryState(false)
 {
     initialize(std::move(filePath));
 }
 Simulation::Simulation():
 clock(0), quantum(0), shouldCallScheduler(false),
-schedulingWasRandom(false), prerunRunned(false) {}
+schedulingWasRandom(false), prerunRunned(false), restoreNextHistoryState(false) {}
 
 Simulation::~Simulation()
 {
@@ -184,6 +184,16 @@ void Simulation::prerun()
     if (prerunRunned)
         return;
 
+    // Reuse the saved next snapshot while replaying an unchanged future timeline.
+    if (restoreNextHistoryState && history.hasFuture())
+    {
+        retrieveNextFromHistory();
+        restoreNextHistoryState = false;
+        prerunRunned = true;
+        return;
+    }
+    restoreNextHistoryState = false;
+
     checkInstancesExecution();
     checkInstancesDeadlines();
     checkTasksArrivals();
@@ -217,6 +227,8 @@ void Simulation::run()
 {
     executeInstances();
     tick();
+    // Keep the saved future available for the next step after returning to the past.
+    restoreNextHistoryState = history.hasFuture();
     unsetCallScheduler();
 
     prerunRunned = false;
@@ -376,7 +388,7 @@ void Simulation::executeInstances()
 */
 void Simulation::saveToHistory()
 {
-    const SystemState currentSystemState(clock, schedulingWasRandom, tasks, instances, cpus);
+    const SystemState currentSystemState(clock, schedulingWasRandom, schedulerName, tasks, instances, cpus);
     history.save(currentSystemState, clock);
 }
 
@@ -390,9 +402,45 @@ void Simulation::retrieveFromHistory()
     clock = lastSystemState.getClock();
     schedulingWasRandom = lastSystemState.getSchedulingWasRandom();
 
+    // Restore the scheduler implementation stored with this historical snapshot.
+    const std::string historicalScheduler = lastSystemState.getSchedulerName();
+    if (schedulerName != historicalScheduler)
+    {
+        delete scheduler;
+        scheduler = historicalScheduler == "RM"
+            ? static_cast<IScheduler*>(new RMScheduler())
+            : static_cast<IScheduler*>(new EDFScheduler());
+        schedulerName = historicalScheduler;
+    }
+
     loadTasks(lastSystemState.getTasks());
     loadInstances(lastSystemState.getInstances());
     loadCpus(lastSystemState.getCpus());
+
+    loadReadyQueue();
+}
+
+void Simulation::retrieveNextFromHistory()
+{
+    SystemState nextSystemState = history.next();
+
+    clock = nextSystemState.getClock();
+    schedulingWasRandom = nextSystemState.getSchedulingWasRandom();
+
+    // Restore the scheduler implementation stored with this historical snapshot.
+    const std::string historicalScheduler = nextSystemState.getSchedulerName();
+    if (schedulerName != historicalScheduler)
+    {
+        delete scheduler;
+        scheduler = historicalScheduler == "RM"
+            ? static_cast<IScheduler*>(new RMScheduler())
+            : static_cast<IScheduler*>(new EDFScheduler());
+        schedulerName = historicalScheduler;
+    }
+
+    loadTasks(nextSystemState.getTasks());
+    loadInstances(nextSystemState.getInstances());
+    loadCpus(nextSystemState.getCpus());
 
     loadReadyQueue();
 }
@@ -435,6 +483,8 @@ void Simulation::setScheduler(const std::string& algorithm)
     if (changed)
     {
         callScheduler();
+        // A scheduler change makes every later snapshot belong to an obsolete timeline.
+        history.discardFuture();
         saveToHistory();
     }
 }
@@ -586,6 +636,8 @@ bool Simulation::setInstanceState(const int instanceId, const TaskState state, s
         unsetCallScheduler();
     }
 
+    // A manual edit starts a new timeline from this point onward.
+    history.discardFuture();
     // Record the updated simulation state
     saveToHistory();
     error.clear();
