@@ -1,5 +1,6 @@
 #ifndef SIMULADOR_ESCALONAMENTO_SYSTEMSTATE_H
 #define SIMULADOR_ESCALONAMENTO_SYSTEMSTATE_H
+#include <string>
 #include <vector>
 
 #include "DTOs/CpuDTO.h"
@@ -12,6 +13,7 @@ class SystemState
 private:
     int clock;
     bool schedulingWasRandom;
+    std::string schedulerName;
 
     std::vector<TaskDTO> tasks;
     std::vector<TaskInstanceDTO> instances;
@@ -24,6 +26,7 @@ public:
     SystemState(
         int _clock,
         bool _schedulingWasRandom,
+        const std::string& _schedulerName,
         const std::vector<Task*>& _tasks,
         const std::vector<TaskInstance*>& _instances,
         const std::vector<CPU*>& _cpus
@@ -31,6 +34,7 @@ public:
 
     int getClock() const;
     bool getSchedulingWasRandom() const;
+    std::string getSchedulerName() const;
     std::vector<TaskDTO> getTasks() const;
     std::vector<TaskInstanceDTO> getInstances() const;
     std::vector<CpuDTO> getCpus() const;

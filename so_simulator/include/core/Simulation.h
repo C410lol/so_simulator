@@ -19,6 +19,7 @@ private:
     bool schedulingWasRandom;
 
     bool prerunRunned;
+    bool restoreNextHistoryState;
 
     std::vector<Task*> tasks;
     std::vector<TaskInstance*> instances;
@@ -58,6 +59,7 @@ private:
 
     void saveToHistory();
     void retrieveFromHistory();
+    void retrieveNextFromHistory();
 
     void tick();
 public:
