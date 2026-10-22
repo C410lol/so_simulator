@@ -363,13 +363,14 @@ void Application::renderGanttPanel()
     // Use saved snapshots so the chart follows the same timeline as back navigation.
     History history = simulation.getHistory();
     const auto& states = history.getStates();
+    const int currentClock = simulation.getCurrentClock();
     auto tasks = simulation.getTasks();
     std::sort(tasks.begin(), tasks.end(), [](const Task* a, const Task* b) { return a->getId() > b->getId(); });
 
     const float labelWidth = 82.0f;
     const float cellWidth = 52.0f;
     const float rowHeight = 34.0f;
-    const int tickCount = std::max(1, simulation.getCurrentClock());
+    const int tickCount = std::max(1, currentClock);
     const float contentWidth = labelWidth + tickCount * cellWidth + 40.0f;
 
     ImGui::BeginChild("Área do Gantt", ImVec2(0, 0), ImGuiChildFlags_Borders,
@@ -381,7 +382,7 @@ void Application::renderGanttPanel()
     const float chartLeft = origin.x + labelWidth;
 
     // Draw tick boundaries and labels across the full visible timeline.
-    for (int tick = 0; tick <= simulation.getCurrentClock() + 1; ++tick)
+    for (int tick = 0; tick <= currentClock + 1; ++tick)
     {
         const float x = chartLeft + tick * cellWidth;
         draw->AddLine(ImVec2(x, chartTop), ImVec2(x, chartBottom), IM_COL32(54, 65, 82, 255));
@@ -390,12 +391,12 @@ void Application::renderGanttPanel()
         draw->AddText(ImVec2(x + 4, chartBottom + 5), IM_COL32(170, 182, 201, 255), label);
     }
     draw->AddLine(ImVec2(chartLeft, chartBottom),
-                  ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, chartBottom),
+                  ImVec2(chartLeft + (currentClock + 1) * cellWidth, chartBottom),
                   IM_COL32(120, 133, 153, 255));
 
     draw->AddText(ImVec2(origin.x + 4, chartTop + 8), IM_COL32(170, 182, 201, 255), "Aleatório");
     draw->AddLine(ImVec2(chartLeft, chartTop + rowHeight),
-                  ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, chartTop + rowHeight),
+                  ImVec2(chartLeft + (currentClock + 1) * cellWidth, chartTop + rowHeight),
                   IM_COL32(39, 47, 61, 255));
 
     std::unordered_map<int, int> rowByTask;
@@ -407,20 +408,26 @@ void Application::renderGanttPanel()
         const float y = chartTop + (row + 1) * rowHeight;
         draw->AddText(ImVec2(origin.x + 4, y + 8), taskColor(task->getColor()),
                       ("T" + std::to_string(task->getId())).c_str());
-        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, y + rowHeight),
+        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (currentClock + 1) * cellWidth, y + rowHeight),
                       IM_COL32(39, 47, 61, 255));
-        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (simulation.getCurrentClock() + 1) * cellWidth, y + rowHeight),
+        draw->AddLine(ImVec2(chartLeft, y + rowHeight), ImVec2(chartLeft + (currentClock + 1) * cellWidth, y + rowHeight),
                       IM_COL32(39, 47, 61, 255));
     }
 
-    const int lastState = static_cast<int>(states.size()) - 1;
+    // Render only snapshots on the active timeline and no later than the visible clock.
+    const int lastState = std::min(
+        static_cast<int>(states.size()) - 1,
+        history.getCurrentIndex()
+    );
     for (int stateIndex = 0; stateIndex <= lastState; ++stateIndex)
     {
         const SystemState& state = states[stateIndex];
         const int tick = state.getClock();
+        if (tick > currentClock)
+            continue;
 
         // Mark only ticks whose saved system state records a random scheduling decision.
-        if (state.getSchedulingWasRandom() && tick >= 0 && tick <= simulation.getCurrentClock())
+        if (state.getSchedulingWasRandom() && tick >= 0 && tick <= currentClock)
         {
             const float x = chartLeft + tick * cellWidth;
             draw->AddText(ImVec2(x + 4, chartTop + 9), IM_COL32(255, 205, 94, 255), "Sim");
@@ -480,9 +487,10 @@ void Application::exportGanttSvg() const
     // Export the current simulation history using the same task and tick layout as the panel.
     const History history = simulation.getHistory();
     const auto& states = history.getStates();
+    const int currentClock = simulation.getCurrentClock();
     auto tasks = simulation.getTasks();
     std::sort(tasks.begin(), tasks.end(), [](const Task* a, const Task* b) { return a->getId() > b->getId(); });
-    const int ticks = std::max(1, simulation.getCurrentClock());
+    const int ticks = std::max(1, currentClock);
     constexpr int left = 100, top = 55, cell = 52, row = 38;
     const int width = left + ticks * cell + 30;
     const int chartBottom = top + (static_cast<int>(tasks.size()) + 1) * row;
@@ -520,11 +528,16 @@ void Application::exportGanttSvg() const
     svg << "<line x1=\"" << left << "\" y1=\"" << chartBottom << "\" x2=\""
         << left + (ticks + 1) * cell << "\" y2=\"" << chartBottom << "\" stroke=\"#788599\"/>\n";
 
-    for (int stateIndex = 0; stateIndex <= history.getCurrentIndex(); ++stateIndex)
+    // Keep the export bounded by both the active history position and current clock.
+    const int lastState = std::min(
+        static_cast<int>(states.size()) - 1,
+        history.getCurrentIndex()
+    );
+    for (int stateIndex = 0; stateIndex <= lastState; ++stateIndex)
     {
         const SystemState& state = states[stateIndex];
         const int tick = state.getClock();
-        if (tick < 0 || tick > ticks)
+        if (tick < 0 || tick > currentClock)
             continue;
 
         if (state.getSchedulingWasRandom())
