@@ -69,6 +69,7 @@ public:
 
     bool initialize(std::string filePath);
     void setScheduler(const std::string& algorithm);
+    bool setInstanceState(TaskInstance* instance, TaskState state);
     std::string getSchedulerName() const;
     bool isSimulationFinished();
     bool canGoBack() const;

@@ -489,6 +489,103 @@ void Simulation::setScheduler(const std::string& algorithm)
     }
 }
 
+bool Simulation::setInstanceState(TaskInstance* instance, TaskState state)
+{
+    if (instance == nullptr || state == TaskState::FINISHED ||
+        instance->getTaskState() == TaskState::FINISHED ||
+        (state != TaskState::READY && state != TaskState::RUNNING))
+        return false;
+
+    if (state == TaskState::RUNNING && cpus.empty())
+        return false;
+
+    const auto instanceIt = std::find(instances.begin(), instances.end(), instance);
+    if (instanceIt == instances.end())
+        return false;
+
+    const TaskState previousState = instance->getTaskState();
+
+    // Detach the instance from its current CPU or queue before assigning the new state.
+    for (CPU* cpu : cpus)
+    {
+        if (cpu != nullptr && cpu->getTaskInstance() == instance)
+        {
+            cpu->removeTaskInstance();
+            cpu->setActive(false);
+        }
+    }
+    std::erase(readyQueue, instance);
+
+    if (state == TaskState::READY)
+    {
+        instance->setTaskState(TaskState::READY);
+        readyQueue.push_back(instance);
+
+        // Fill the CPU released by a running instance, without selecting that
+        // same instance again during this scheduling pass.
+        if (previousState == TaskState::RUNNING && scheduler != nullptr)
+        {
+            std::vector<TaskInstance*> schedulableQueue = readyQueue;
+            std::erase(schedulableQueue, instance);
+            scheduler->schedule(schedulableQueue, cpus, schedulingWasRandom);
+            readyQueue = std::move(schedulableQueue);
+            readyQueue.push_back(instance);
+        }
+    }
+    else
+    {
+        // Prefer an idle CPU. If all CPUs are busy, preempt the running
+        // instance with the lowest priority under the active scheduling policy.
+        CPU* selectedCpu = nullptr;
+        for (CPU* cpu : cpus)
+        {
+            if (cpu != nullptr && (!cpu->isActive() || cpu->getTaskInstance() == nullptr))
+            {
+                selectedCpu = cpu;
+                break;
+            }
+        }
+        if (selectedCpu == nullptr)
+        {
+            std::vector<TaskInstance*> runningInstances;
+            for (CPU* cpu : cpus)
+                if (cpu != nullptr && cpu->isActive() && cpu->getTaskInstance() != nullptr)
+                    runningInstances.push_back(cpu->getTaskInstance());
+
+            TaskInstance* lowestPriority = scheduler != nullptr
+                ? scheduler->selectLowestPriorityFrom(runningInstances, schedulingWasRandom)
+                : (runningInstances.empty() ? nullptr : runningInstances.front());
+
+            for (CPU* cpu : cpus)
+                if (cpu != nullptr && cpu->getTaskInstance() == lowestPriority)
+                {
+                    selectedCpu = cpu;
+                    break;
+                }
+
+            if (selectedCpu == nullptr)
+                return false;
+
+            TaskInstance* displaced = selectedCpu->getTaskInstance();
+            if (displaced != nullptr)
+            {
+                displaced->setTaskState(TaskState::READY);
+                if (std::find(readyQueue.begin(), readyQueue.end(), displaced) == readyQueue.end())
+                    readyQueue.push_back(displaced);
+            }
+        }
+        selectedCpu->setTaskInstance(instance);
+        selectedCpu->setActive(true);
+        instance->setTaskState(TaskState::RUNNING);
+    }
+
+    // A manual change starts a new history branch at the current tick.
+    history.discardFuture();
+    restoreNextHistoryState = false;
+    saveToHistory();
+    return true;
+}
+
 std::string Simulation::getSchedulerName() const { return schedulerName; }
 bool Simulation::isSimulationFinished() { return isFinished(); }
 bool Simulation::canGoBack() const { return history.canGoBack(); }

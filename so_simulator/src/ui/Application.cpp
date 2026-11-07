@@ -278,7 +278,6 @@ void Application::renderTasksPanel()
             ImGui::Text("Estado: %s", task->isFinished() ? "Finalizada" : (isSuspended ? "Suspensa" : "Ativa"));
 
             ImGui::SeparatorText("Instâncias e estado");
-            const char* stateLabels[] = {"Pronta", "Executando", "Finalizada"};
             for (TaskInstance* instance : task->getInstances())
             {
                 if (instance == nullptr)
@@ -287,7 +286,18 @@ void Application::renderTasksPanel()
                 ImGui::PushID(instance->getId());
                 ImGui::Text("T%d.%d", task->getId(), instance->getInstanceNumber());
                 ImGui::SameLine();
-                ImGui::TextDisabled("%s", stateLabels[static_cast<int>(instance->getTaskState())]);
+                if (instance->getTaskState() == TaskState::FINISHED)
+                {
+                    ImGui::TextDisabled("Finalizada");
+                }
+                else
+                {
+                    int selectedState = instance->getTaskState() == TaskState::RUNNING ? 1 : 0;
+                    const char* stateLabels[] = {"Pronta", "Executando"};
+                    if (ImGui::Combo("##estado", &selectedState, stateLabels, IM_ARRAYSIZE(stateLabels)))
+                        simulation.setInstanceState(instance,
+                            selectedState == 1 ? TaskState::RUNNING : TaskState::READY);
+                }
                 ImGui::PopID();
             }
             ImGui::PopID();
