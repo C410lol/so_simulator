@@ -262,13 +262,22 @@ void Application::renderTasksPanel()
         const std::string label = "Tarefa T" + std::to_string(task->getId());
         if (ImGui::TreeNode(label.c_str()))
         {
+            ImGui::PushID(task->getId());
             ImGui::Text("Cor: %s", task->getColor().c_str());
             ImGui::Text("Ingresso: %d   Duração: %d", task->getStart(), task->getDuration());
             ImGui::Text("Período: %d   Prazo: %d", task->getPeriod(), task->getDeadline());
-            ImGui::Text("Ativações: %d/10   %s", task->getActivationCount(),
-                        task->isFinished() ? "Finalizada" : "Ativa");
+            ImGui::Text("Ativações: %d/10", task->getActivationCount());
+            const auto taskInstances = task->getInstances();
+            const bool hasReadyOrRunning = std::any_of(taskInstances.begin(), taskInstances.end(),
+                [](const TaskInstance* instance) {
+                    return instance != nullptr &&
+                           (instance->getTaskState() == TaskState::READY ||
+                            instance->getTaskState() == TaskState::RUNNING);
+                });
+            const bool isSuspended = !task->isFinished() && !taskInstances.empty() && !hasReadyOrRunning;
+            ImGui::Text("Estado: %s", task->isFinished() ? "Finalizada" : (isSuspended ? "Suspensa" : "Ativa"));
 
-            ImGui::SeparatorText("Instâncias e estado manual");
+            ImGui::SeparatorText("Instâncias e estado");
             const char* stateLabels[] = {"Pronta", "Executando", "Finalizada"};
             for (TaskInstance* instance : task->getInstances())
             {
@@ -278,33 +287,12 @@ void Application::renderTasksPanel()
                 ImGui::PushID(instance->getId());
                 ImGui::Text("T%d.%d", task->getId(), instance->getInstanceNumber());
                 ImGui::SameLine();
-
-                int selectedState = static_cast<int>(instance->getTaskState());
-                if (ImGui::Combo("##Estado", &selectedState, stateLabels, IM_ARRAYSIZE(stateLabels)))
-                {
-                    std::string error;
-                    // Manual state changes are delegated to Simulation so they enter its history.
-                    if (simulation.setInstanceState(instance->getId(), static_cast<TaskState>(selectedState), error))
-                    {
-                        stateEditMessage = "Estado da instância atualizado e salvo no histórico.";
-                        stateEditFailed = false;
-                    }
-                    else
-                    {
-                        stateEditMessage = error;
-                        stateEditFailed = true;
-                    }
-                }
+                ImGui::TextDisabled("%s", stateLabels[static_cast<int>(instance->getTaskState())]);
                 ImGui::PopID();
             }
+            ImGui::PopID();
             ImGui::TreePop();
         }
-    }
-    if (!stateEditMessage.empty())
-    {
-        const ImVec4 color = stateEditFailed ? ImVec4(1.0f, 0.38f, 0.35f, 1.0f)
-                                              : ImVec4(0.45f, 0.85f, 0.65f, 1.0f);
-        ImGui::TextColored(color, "%s", stateEditMessage.c_str());
     }
 }
 
@@ -317,7 +305,9 @@ void Application::renderControls()
     const bool finished = simulation.isSimulationFinished();
     // Only step backward when history contains an earlier simulation state.
     if (ImGui::Button("Voltar", ImVec2(-1, 34)) && simulation.canGoBack())
+    {
         simulation.back();
+    }
     // Prevent forward execution once the simulation has reached its end.
     ImGui::BeginDisabled(finished);
     if (ImGui::Button("Avançar um tick", ImVec2(-1, 34)))
@@ -357,7 +347,7 @@ void Application::renderGanttPanel()
     ImGui::TextDisabled("Execução por tarefa e processador ao longo dos ticks");
     ImGui::Separator();
     ImGui::TextColored(ImVec4(0.65f, 0.7f, 0.8f, 1), "Legenda:");
-    ImGui::SameLine(); ImGui::Text("bloco colorido = execução   |   contorno cinza = ocioso   |   ! = prazo perdido");
+    ImGui::SameLine(); ImGui::Text("bloco colorido = execução   |   pontilhado = suspensa (sem instância pronta/executando)   |   ! = prazo perdido");
     ImGui::SameLine(); ImGui::Text("   ◆ chegada   ✓ conclusão");
 
     // Use saved snapshots so the chart follows the same timeline as back navigation.
@@ -434,8 +424,38 @@ void Application::renderGanttPanel()
         }
 
         std::unordered_map<int, int> taskForInstance;
-        for (TaskInstanceDTO instance : state.getInstances())
+        std::unordered_map<int, bool> finishedTasks;
+        for (const TaskDTO& task : state.getTasks())
+            finishedTasks[task.id] = task.finished;
+        const auto stateInstances = state.getInstances();
+        for (TaskInstanceDTO instance : stateInstances)
             taskForInstance[instance.id] = instance.taskId;
+
+        // A muted dotted cell marks ticks where this task had no ready or running instance.
+        for (const Task* task : tasks)
+        {
+            const bool hasAnyInstance = std::any_of(
+                stateInstances.begin(), stateInstances.end(), [task](const TaskInstanceDTO& instance) {
+                    return instance.taskId == task->getId();
+                });
+            const bool hasPendingInstance = std::any_of(
+                stateInstances.begin(), stateInstances.end(), [task](const TaskInstanceDTO& instance) {
+                    return instance.taskId == task->getId() &&
+                           (instance.state == TaskState::READY || instance.state == TaskState::RUNNING);
+                });
+            if (!hasAnyInstance || hasPendingInstance || finishedTasks[task->getId()])
+                continue;
+
+            const int row = rowByTask[task->getId()];
+            const float left = chartLeft + tick * cellWidth + 2;
+            const float top = chartTop + row * rowHeight + 4;
+            const ImU32 dotColor = IM_COL32(112, 125, 145, 150);
+            draw->AddRectFilled(ImVec2(left, top), ImVec2(left + cellWidth - 4, top + rowHeight - 8),
+                                IM_COL32(35, 43, 57, 170), 4.0f);
+            for (float dotY = top + 5; dotY < top + rowHeight - 8; dotY += 7)
+                for (float dotX = left + 5; dotX < left + cellWidth - 4; dotX += 8)
+                    draw->AddCircleFilled(ImVec2(dotX, dotY), 1.0f, dotColor);
+        }
 
         // Place a colored execution block in the row for each active CPU.
         for (CpuDTO cpu : state.getCpus())

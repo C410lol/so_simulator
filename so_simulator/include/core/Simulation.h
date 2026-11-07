@@ -73,7 +73,6 @@ public:
     bool isSimulationFinished();
     bool canGoBack() const;
     std::string getLastError() const;
-    bool setInstanceState(int instanceId, TaskState state, std::string& error);
 
     void prerun();
     void back();

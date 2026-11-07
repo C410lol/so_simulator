@@ -14,9 +14,6 @@ private:
     bool ganttExported = false;
     std::string configPath;
     std::string configError;
-    std::string stateEditMessage;
-    bool stateEditFailed = false;
-
     bool loadConfiguration(const std::string& path);
     void renderWelcome();
     void renderSimulation();
