@@ -1,45 +1,45 @@
-# SO Simulator — Simulador de Escalonamento
+# SO Simulator — Operating System Scheduling Simulator
 
-Aplicação gráfica para **simular algoritmos de escalonamento de tarefas em sistemas operacionais**, com foco em algoritmos utilizados em sistemas de tempo real. O simulador permite configurar tarefas e CPUs, escolher o algoritmo de escalonamento e acompanhar a execução da simulação pela interface.
+A graphical application for **simulating task scheduling algorithms in operating systems**, with a focus on algorithms used in real-time systems. The simulator allows users to configure tasks and CPUs, choose a scheduling algorithm, and follow the simulation through its interface.
 
-O projeto foi desenvolvido em C++20 e utiliza Raylib e Dear ImGui para a camada visual.
+The project was developed in C++20 and uses Raylib and Dear ImGui for its visual layer.
 
-## ⚙️ Algoritmos de escalonamento
+## ⚙️ Scheduling algorithms
 
-O simulador implementa dois algoritmos:
+The simulator implements two algorithms:
 
-- **Rate Monotonic (RM):** escalonamento de prioridade fixa, em que a prioridade das tarefas é determinada por seus períodos.
-- **Earliest Deadline First (EDF):** escalonamento dinâmico, priorizando a instância de tarefa com o prazo mais próximo.
+- **Rate Monotonic (RM):** fixed-priority scheduling, where task priority is determined by its period.
+- **Earliest Deadline First (EDF):** dynamic scheduling that prioritizes the task instance with the closest deadline.
 
-A configuração permite definir a quantidade de CPUs e o quantum utilizado na simulação. Cada tarefa possui identificador, cor, instante de chegada, duração, período e prazo.
+The configuration allows users to define the number of CPUs and the quantum used in the simulation. Each task has an identifier, color, arrival time, execution duration, period, and deadline.
 
-## ✨ Recursos
+## ✨ Features
 
-- Carregamento de configurações a partir de arquivos TXT.
-- Validação dos parâmetros globais e dos dados das tarefas antes de iniciar a simulação.
-- Seleção entre os algoritmos RM e EDF.
-- Configuração de múltiplas CPUs.
-- Avanço da simulação e execução até sua conclusão.
-- Histórico de estados, permitindo consultar estados anteriores da simulação.
-- Interface gráfica para interação e acompanhamento do sistema.
+- Load configurations from TXT files.
+- Validate global parameters and task data before starting the simulation.
+- Choose between the RM and EDF algorithms.
+- Configure multiple CPUs.
+- Step through the simulation or run it until completion.
+- Maintain a state history, allowing previous simulation states to be revisited.
+- Graphical interface for interacting with and monitoring the system.
 
-## 📝 Formato do arquivo de configuração
+## 📝 Configuration file format
 
-O arquivo de configuração utiliza campos separados por ponto e vírgula (`;`).
+The configuration file uses fields separated by semicolons (`;`).
 
-A primeira linha define o algoritmo, o quantum e a quantidade de CPUs:
-
-```text
-ALGORITMO;QUANTUM;NUMERO_DE_CPUS
-```
-
-Cada linha seguinte representa uma tarefa:
+The first line defines the algorithm, quantum, and number of CPUs:
 
 ```text
-ID;COR_HEXADECIMAL;CHEGADA;DURACAO;PERIODO;PRAZO
+ALGORITHM;QUANTUM;NUMBER_OF_CPUS
 ```
 
-Exemplo:
+Each following line represents a task:
+
+```text
+ID;HEX_COLOR;ARRIVAL_TIME;DURATION;PERIOD;DEADLINE
+```
+
+Example:
 
 ```text
 EDF;2;2
@@ -48,11 +48,11 @@ EDF;2;2
 3;F9C74F;0;1;8;8
 ```
 
-O algoritmo aceita os valores `RM` e `EDF`. A cor é informada em hexadecimal, sem necessidade de prefixo `#`. Os valores numéricos de quantum, quantidade de CPUs, duração, período e prazo devem respeitar as validações do projeto.
+The algorithm accepts the values `RM` and `EDF`. The color is provided in hexadecimal, without requiring a `#` prefix. The numeric values for quantum, number of CPUs, duration, period, and deadline must comply with the project's validation rules.
 
-Há arquivos de exemplo no diretório `config-files/`.
+Example files are available in the `config-files/` directory.
 
-## 🧰 Tecnologias
+## 🧰 Technologies
 
 - **C++20**
 - **CMake 3.21+**
@@ -61,32 +61,32 @@ Há arquivos de exemplo no diretório `config-files/`.
 - **rlImGui**
 - **tinyfiledialogs**
 
-As dependências visuais são declaradas no CMake por meio de FetchContent, que realiza o download das versões configuradas durante a geração do projeto.
+The visual dependencies are declared in CMake through FetchContent, which downloads the configured versions when the project is generated.
 
-## 🗂️ Estrutura do projeto
+## 🗂️ Project structure
 
-O código-fonte da aplicação está dentro do diretório `so_simulator/`:
+The application's source code is located in the `so_simulator/` directory:
 
-- `include/core`: representação de tarefas, instâncias, CPUs, fila de prontos e simulação.
-- `include/scheduler`: interface dos escalonadores e implementações RM e EDF.
-- `include/config`: estruturas, parser e validação dos arquivos de configuração.
-- `include/history`: histórico de estados da simulação.
-- `include/ui`: aplicação e interface gráfica.
-- `src/`: implementações das classes.
-- `config-files/`: configurações de exemplo.
+- `include/core`: representation of tasks, task instances, CPUs, the ready queue, and the simulation.
+- `include/scheduler`: scheduler interface and RM and EDF implementations.
+- `include/config`: structures, parser, and configuration file validation.
+- `include/history`: simulation state history.
+- `include/ui`: application and graphical interface.
+- `src/`: class implementations.
+- `config-files/`: example configuration files.
 
-## ▶️ Como compilar e executar
+## ▶️ How to build and run
 
-### Pré-requisitos
+### Prerequisites
 
-- CMake 3.21 ou superior.
-- Compilador C++ com suporte a C++20.
+- CMake 3.21 or higher.
+- A C++ compiler with C++20 support.
 - Git.
-- Ferramentas e bibliotecas de desenvolvimento necessárias para compilar aplicações desktop com Raylib no seu sistema operacional.
+- The development tools and libraries required to build Raylib desktop applications on your operating system.
 
 ### Build
 
-A partir da raiz deste repositório, entre na pasta do projeto:
+From the repository root, enter the project directory:
 
 ```bash
 cd so_simulator
@@ -94,16 +94,16 @@ cmake -S . -B build
 cmake --build build
 ```
 
-### Execução
+### Run
 
-Após a compilação, execute o binário gerado na pasta de build:
+After building, run the generated binary from the build directory:
 
 ```bash
 ./build/simulator
 ```
 
-Na tela inicial, escolha um arquivo TXT de configuração ou utilize a opção de configuração padrão, caso o arquivo correspondente esteja disponível no ambiente.
+On the welcome screen, choose a TXT configuration file or use the default configuration option, provided the corresponding file is available in the environment.
 
 ---
 
-Projeto acadêmico de simulação de escalonamento de tarefas, com foco na visualização e comparação de políticas de escalonamento.
+Academic project for simulating task scheduling, focused on visualizing and comparing scheduling policies.
